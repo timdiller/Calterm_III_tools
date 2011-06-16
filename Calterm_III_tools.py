@@ -21,6 +21,12 @@ def import_calterm_log_file(filename):
     software and return a structured, named array for analysis.
     The Calterm III log file has 10 header lines. The variable names are given
     on the 8th line, the units on the 9th, and the memory address on the 10th.
+    The returned result is an ndarray with named dtypes. The columns can be
+    accessed as expected:
+
+    l['DLA_Timestamp'] - this column appears in every log file
+    l['Engine_Speed'] - a useful piece of information
+    etc.
     '''
     
     f_l = open(filename)
