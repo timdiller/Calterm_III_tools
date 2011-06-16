@@ -27,6 +27,7 @@ def import_calterm_log_file(filename):
     l['DLA_Timestamp'] - this column appears in every log file
     l['Engine_Speed'] - a useful piece of information
     etc.
+    
     '''
     
     f_l = open(filename)
