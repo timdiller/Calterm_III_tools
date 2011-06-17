@@ -3,10 +3,9 @@ import numpy as np
 from enthought.traits.api import * 
 from enthought.traits.ui.api import * #View,Group,Item
 from enthought.traits.ui.menu import OKButton,CancelButton
-from enthought.chaco.api import * #Plot, ArrayPlotData, jet
-from enthought.enable.api import *
-from enthought.chaco.tools.api import *
-import numpy as np
+#from enthought.chaco.api import * #Plot, ArrayPlotData, jet
+#from enthought.enable.api import *
+#from enthought.chaco.tools.api import *
 ##import wx
 ##import matplotlib as mpl
 ##mpl.use('WXAgg',warn=False)
@@ -28,8 +27,9 @@ def convert_date(date_str):
 
 def import_calterm_log_parameter_names(filename):
     '''
-    Read the Calterm III log file and return line 8 in a form useful for
-    genfromtxt().
+    Read the Calterm III log file and return parameter names and units as a
+    comma separated string - the form useful for genfromtxt().
+    To use the names as a list use n.split(",").
     '''
     f = open(filename)
     for i in range(7):
