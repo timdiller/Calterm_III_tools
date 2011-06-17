@@ -99,16 +99,14 @@ class calterm_data_viewer(HasTraits):
             Group(
                 Group(
                     Item(name = 'data_file',
-                         style = 'simple',
-                         editor = FileEditor()),
+                         style = 'simple'),
                     Item('load_data_button',
                          label = 'Load',
                          show_label = False),
                     orientation = 'horizontal'),
                 Group(
                     Item(name='log_file',
-                         style='simple',
-                         editor=FileEditor()),
+                         style='simple'),
                     Item('load_log_button',
                          label='Load',
                          show_label=False),
@@ -122,9 +120,15 @@ class calterm_data_viewer(HasTraits):
                                       right_column_title="Parameters to plot")),
                 orientation='vertical'),
             Group(
-                Item(name='align_button'),
-                Item(name='plot_button'),
-                Item(name='save_button'),
+                Item(name='align_button',
+                     label="Align Data",
+                     show_label=False),
+                Item(name='plot_button',
+                     label="Plot",
+                     show_label=False),
+                Item(name='save_button',
+                     label="Save",
+                     show_label=False),
                 orientation="vertical"),
             orientation="horizontal"),
         title = "Calterm III data alignment and analysis",
@@ -139,15 +143,16 @@ class calterm_data_viewer(HasTraits):
         axes are added to the figure here under the handle self.axes.
         
         """
-        p1 = Parameter(name="parameter 1", unit="unit1")
-        p2 = Parameter(name="parameter 2")
-        p3 = Parameter(name="parameter 3")
-        
-        self.parameters=[p1, p2, p3]
+        self.parameters=[]
+
+    def _load_log_button_fired(self):
+        [p,u] = import_calterm_log_parameter_names(self.log_file)
+        p_raw = p.split(',')
+        u_raw = u.split(',')
+        self.parameters = []
+        for i in range(len(p_raw)):
+            self.parameters.append(Parameter(name=p_raw[i],unit=u_raw[i]))
+        print "Trying to set the parameters."
 
     def start(self):
         self.configure_traits()
-
-if __name__ == '__main__':
-    f=calterm_data_viewer()
-    f.start()
