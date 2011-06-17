@@ -7,9 +7,9 @@ from enthought.chaco.api import * #Plot, ArrayPlotData, jet
 from enthought.enable.api import *
 from enthought.chaco.tools.api import *
 import numpy as np
-import wx
-import matplotlib as mpl
-mpl.use('WXAgg',warn=False)
+##import wx
+##import matplotlib as mpl
+##mpl.use('WXAgg',warn=False)
 
 def convert_date(date_str):
     '''
@@ -26,6 +26,19 @@ def convert_date(date_str):
     else:
         return float(d)
 
+def import_calterm_log_parameter_names(filename):
+    '''
+    Read the Calterm III log file and return line 8 in a form useful for
+    genfromtxt().
+    '''
+    f = open(filename)
+    for i in range(7):
+        f.readline()
+    names_raw = f.readline()
+    units_raw = f.readline()
+    f.close()
+    return [names_raw.strip('\r\n'), units_raw.strip('\r\n')]
+
 def import_calterm_log_file(filename):
     '''
     Open a comma-separated-variable file output by Cummins Calterm III
@@ -35,22 +48,20 @@ def import_calterm_log_file(filename):
     The returned result is an ndarray with named dtypes. The columns can be
     accessed as expected:
 
-    l['DLA_Timestamp'] - this column appears in every log file
-    l['Engine_Speed'] - a useful piece of information
+    l["DLA_Timestamp"] - this column appears in every log file
+    l["Engine_Speed"] - a useful piece of information
     etc.
     
     '''
     
-    f_l = open(filename)
-    names_raw = f_l.readlines()[7]
-    f_l.seek(0)
-    l = np.genfromtxt(f_l, delimiter=',',
+    f = open(filename)
+    l = np.genfromtxt(f, delimiter=',',
                       unpack=True,
                       skip_header=10,
                       usecols=range(1,38),
-                      names=names_raw.strip('\r\n'),
+                      names=import_calterm_log_parameter_names(filename)[0],
                       converters={1:convert_date})
-    f_l.close()
+    f.close()
     return l
 
 class Parameter(HasTraits):
@@ -137,5 +148,6 @@ class calterm_data_viewer(HasTraits):
     def start(self):
         self.configure_traits()
 
-f=calterm_data_viewer()
-f.start()
+if __name__ == '__main__':
+    f=calterm_data_viewer()
+    f.start()
