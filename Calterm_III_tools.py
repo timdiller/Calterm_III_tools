@@ -51,7 +51,6 @@ def import_calterm_log_file(filename):
     l["DLA_Timestamp"] - this column appears in every log file
     l["Engine_Speed"] - a useful piece of information
     etc.
-    
     '''
     
     f = open(filename)
@@ -77,8 +76,8 @@ class calterm_data_viewer(HasTraits):
     ## from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 
     parameters = List(Parameter)
+    selected_params = List
     parameter_names = Property(List(String), depends_on=['parameters'])
-    my_params = List
 
     def _get_parameter_names(self):
         return [n.name for n in self.parameters]
@@ -94,7 +93,7 @@ class calterm_data_viewer(HasTraits):
     data_file = File(filter = ['csv'])
     log_file = File(filter = ['csv'])
 
-    view1 = View(
+    main_view = View(
         Group(
             Group(
                 Group(
@@ -111,13 +110,6 @@ class calterm_data_viewer(HasTraits):
                          label='Load',
                          show_label=False),
                     orientation='horizontal'),
-                Item(name='my_params',
-                     show_label=False,
-                     style='simple',
-                     editor=SetEditor(name='parameter_names',
-                                      can_move_all=True,
-                                      left_column_title="Available parameters",
-                                      right_column_title="Parameters to plot")),
                 orientation='vertical'),
             Group(
                 Item(name='align_button',
@@ -134,16 +126,17 @@ class calterm_data_viewer(HasTraits):
         title = "Calterm III data alignment and analysis",
         buttons = [OKButton])
 
-    def __init__(self):
-        """
-        need to change this to offer a load dialog on startup. for
-        development and debugging, just load the data from an npz
-        save file.
-
-        axes are added to the figure here under the handle self.axes.
-        
-        """
-        self.parameters=[]
+    parameter_view = View(
+        Item(name='selected_params',
+             show_label=False,
+             style='custom',
+             editor=SetEditor(name='parameter_names',
+                              ordered=True,
+                              can_move_all=True,
+                              left_column_title="Available parameters",
+                              right_column_title="Parameters to plot")),
+        title = "Select parameters to plot",
+        buttons = [OKButton])
 
     def _load_log_button_fired(self):
         [p,u] = import_calterm_log_parameter_names(self.log_file)
@@ -152,7 +145,14 @@ class calterm_data_viewer(HasTraits):
         self.parameters = []
         for i in range(len(p_raw)):
             self.parameters.append(Parameter(name=p_raw[i],unit=u_raw[i]))
-        print "Trying to set the parameters."
+        self.configure_traits(view='parameter_view')
+
+    def _plot_button_fired(self):
+        print self.selected_params
 
     def start(self):
-        self.configure_traits()
+        self.configure_traits(view='main_view')
+
+if __name__ == '__main__':
+    f=calterm_data_viewer()
+    f.start()
