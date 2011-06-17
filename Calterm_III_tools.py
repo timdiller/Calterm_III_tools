@@ -1,5 +1,16 @@
 import numpy as np
 
+from enthought.traits.api import * 
+from enthought.traits.ui.api import * #View,Group,Item
+from enthought.traits.ui.menu import OKButton,CancelButton
+from enthought.chaco.api import * #Plot, ArrayPlotData, jet
+from enthought.enable.api import *
+from enthought.chaco.tools.api import *
+import numpy as np
+import wx
+import matplotlib as mpl
+mpl.use('WXAgg',warn=False)
+
 def convert_date(date_str):
     '''
     Converter function for the genfromtxt import. Return a float in decimal
@@ -14,7 +25,7 @@ def convert_date(date_str):
                float(d[2])
     else:
         return float(d)
-    
+
 def import_calterm_log_file(filename):
     '''
     Open a comma-separated-variable file output by Cummins Calterm III
@@ -42,3 +53,89 @@ def import_calterm_log_file(filename):
     f_l.close()
     return l
 
+class Parameter(HasTraits):
+    name = String
+    unit = String
+        
+class calterm_data_viewer(HasTraits):
+    """
+    """
+
+    ## from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
+    ## from matplotlib.figure import Figure
+    ## from matplotlib.backends.backend_wx import NavigationToolbar2Wx
+
+    parameters = List(Parameter)
+    parameter_names = Property(List(String), depends_on=['parameters'])
+    my_params = List
+
+    def _get_parameter_names(self):
+        return [n.name for n in self.parameters]
+    
+    ## UI elements
+    align_button = Button()
+    plot_button = Button()
+    save_button = Button()
+    
+    load_data_button = Button()
+    load_log_button = Button()
+    
+    data_file = File(filter = ['csv'])
+    log_file = File(filter = ['csv'])
+
+    view1 = View(
+        Group(
+            Group(
+                Group(
+                    Item(name = 'data_file',
+                         style = 'simple',
+                         editor = FileEditor()),
+                    Item('load_data_button',
+                         label = 'Load',
+                         show_label = False),
+                    orientation = 'horizontal'),
+                Group(
+                    Item(name='log_file',
+                         style='simple',
+                         editor=FileEditor()),
+                    Item('load_log_button',
+                         label='Load',
+                         show_label=False),
+                    orientation='horizontal'),
+                Item(name='my_params',
+                     show_label=False,
+                     style='simple',
+                     editor=SetEditor(name='parameter_names',
+                                      can_move_all=True,
+                                      left_column_title="Available parameters",
+                                      right_column_title="Parameters to plot")),
+                orientation='vertical'),
+            Group(
+                Item(name='align_button'),
+                Item(name='plot_button'),
+                Item(name='save_button'),
+                orientation="vertical"),
+            orientation="horizontal"),
+        title = "Calterm III data alignment and analysis",
+        buttons = [OKButton])
+
+    def __init__(self):
+        """
+        need to change this to offer a load dialog on startup. for
+        development and debugging, just load the data from an npz
+        save file.
+
+        axes are added to the figure here under the handle self.axes.
+        
+        """
+        p1 = Parameter(name="parameter 1", unit="unit1")
+        p2 = Parameter(name="parameter 2")
+        p3 = Parameter(name="parameter 3")
+        
+        self.parameters=[p1, p2, p3]
+
+    def start(self):
+        self.configure_traits()
+
+f=calterm_data_viewer()
+f.start()
