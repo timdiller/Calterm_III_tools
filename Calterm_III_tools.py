@@ -178,7 +178,7 @@ class calterm_data_viewer(HasTraits):
             data = np.genfromtxt(f,delimiter=',', unpack=True, names=True)
             f.close()
             length  = data.shape[0]
-            time = np.arange(0,step*length,step)
+            time = np.linspace(0,step * (length - 1),length)
             return([time, data])
 
         fileopen = {'.npz':npz_open,
@@ -189,7 +189,7 @@ class calterm_data_viewer(HasTraits):
 
     def _plot_button_fired(self):
         pad = 0.05
-        fig_width = 5.
+        fig_width = 8.5
         ax_left = 0.18
         ax_width = 0.75
         
@@ -201,7 +201,7 @@ class calterm_data_viewer(HasTraits):
             print "No files loaded or no parameters selected.\n"
             return
         
-        fig_height = 2. * num_axes + 1.5
+        fig_height = 11# 2. * num_axes + 1.5
         fig = plt.figure(1, figsize=[fig_width, fig_height])
         fig.clf()
 
@@ -226,6 +226,7 @@ class calterm_data_viewer(HasTraits):
             ax[i].plot(self.sensor_data.time, self.sensor_data.data[names[1]], 'g', label=names[1])
             ax[i].set_xlabel('Time (s)')
             ax[i].set_ylabel('Output (raw)')
+            ax[i].legend(loc='best')
 
     def start(self):
         self.configure_traits(view='main_view')
