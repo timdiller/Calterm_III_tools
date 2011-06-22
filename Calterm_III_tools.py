@@ -7,7 +7,8 @@ from enthought.traits.ui.menu import OKButton,CancelButton
 #from enthought.enable.api import *
 #from enthought.chaco.tools.api import *
 ##import wx
-##import matplotlib as mpl
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 ##mpl.use('WXAgg',warn=False)
 
 def convert_date(date_str):
@@ -66,6 +67,12 @@ def import_calterm_log_file(filename):
 class Parameter(HasTraits):
     name = String
     unit = String
+
+class Data(HasTraits):
+    filename = File()
+    loaded = Bool(False)
+    data = np.asarray([])
+    time = np.asarray([])
         
 class calterm_data_viewer(HasTraits):
     """
@@ -99,16 +106,16 @@ class calterm_data_viewer(HasTraits):
                 Group(
                     Item(name = 'data_file',
                          style = 'simple'),
-                    Item('load_data_button',
-                         label = 'Load',
-                         show_label = False),
+                    ## Item('load_data_button',
+                    ##      label = 'Load',
+                    ##      show_label = False),
                     orientation = 'horizontal'),
                 Group(
                     Item(name='log_file',
                          style='simple'),
-                    Item('load_log_button',
-                         label='Load',
-                         show_label=False),
+                    ## Item('load_log_button',
+                    ##      label='Load',
+                    ##      show_label=False),
                     orientation='horizontal'),
                 orientation='vertical'),
             Group(
@@ -138,7 +145,8 @@ class calterm_data_viewer(HasTraits):
         title = "Select parameters to plot",
         buttons = [OKButton])
 
-    def _load_log_button_fired(self):
+#    def _load_log_button_fired(self):
+    def _log_file_changed(self):
         [p,u] = import_calterm_log_parameter_names(self.log_file)
         p_raw = p.split(',')
         u_raw = u.split(',')
@@ -146,9 +154,37 @@ class calterm_data_viewer(HasTraits):
         for i in range(len(p_raw)):
             self.parameters.append(Parameter(name=p_raw[i],unit=u_raw[i]))
         self.configure_traits(view='parameter_view')
+        self.log = import_calterm_log_file(self.log_file)
+
+    def _data_file_changed(self):
+        from os.path import splitext
+
+        def npz_open():
+            npz = np.load(self.data_file)
+            return([npz['time'], npz['data']])
+            
+        def csv_open():
+            import re
+            f = open(self.data_file)
+            date_str = f.readline()
+            step_str = f.readline()
+            [a,b] = re.split("=",step_str.strip('\r\n'))
+            step = float(b)
+            del a,b
+            data = np.genfromtxt(f,delimiter=',', unpack=True, names=True)
+            f.close()
+            length  = data.shape[0]
+            time = np.arange(0,step*length,step)
+            return([time, data])
+
+        fileopen = {'.npz':npz_open,
+                    '.csv':csv_open,
+                    }
+        [self.time, self.data] = fileopen[splitext(self.data_file)[1]]()
 
     def _plot_button_fired(self):
-        print self.selected_params
+        fig = plt.figure(1)
+        plt.plot(self.time,self.data[self.data.dtype.names[0]])
 
     def start(self):
         self.configure_traits(view='main_view')
