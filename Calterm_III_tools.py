@@ -43,7 +43,8 @@ def import_calterm_log_parameter_names(filename):
 def import_calterm_log_file(filename):
     '''
     Open a comma-separated-variable file output by Cummins Calterm III
-    software and return a structured, named array for analysis.
+    software and return a time arrary and a structured, named array for the other
+    parameters.
     The Calterm III log file has 10 header lines. The variable names are given
     on the 8th line, the units on the 9th, and the memory address on the 10th.
     The returned result is an ndarray with named dtypes. The columns can be
@@ -55,21 +56,20 @@ def import_calterm_log_file(filename):
     '''
     
     f = open(filename)
-    l = np.genfromtxt(f, delimiter=',',
+    data = np.genfromtxt(f, delimiter=',',
                       unpack=True,
                       skip_header=10,
                       usecols=range(1,38),
                       names=import_calterm_log_parameter_names(filename)[0],
                       converters={1:convert_date})
     f.close()
-    return l
+    return [data['DLA_Timestamp'],data]
 
 class Parameter(HasTraits):
     name = String
     unit = String
 
 class Data(HasTraits):
-    filename = File()
     loaded = Bool(False)
     data = np.asarray([])
     time = np.asarray([])
@@ -96,6 +96,9 @@ class calterm_data_viewer(HasTraits):
     
     load_data_button = Button()
     load_log_button = Button()
+
+    sensor_data = Data()
+    log_data = Data()
     
     data_file = File(filter = ['csv'])
     log_file = File(filter = ['csv'])
@@ -152,9 +155,10 @@ class calterm_data_viewer(HasTraits):
         u_raw = u.split(',')
         self.parameters = []
         for i in range(len(p_raw)):
-            self.parameters.append(Parameter(name=p_raw[i],unit=u_raw[i]))
+            self.parameters.append(Parameter(name=p_raw[i], unit=u_raw[i]))
         self.configure_traits(view='parameter_view')
-        self.log = import_calterm_log_file(self.log_file)
+        [self.log_data.time, self.log_data.data] = import_calterm_log_file(self.log_file)
+        self.log_data.loaded = True
 
     def _data_file_changed(self):
         from os.path import splitext
@@ -180,11 +184,48 @@ class calterm_data_viewer(HasTraits):
         fileopen = {'.npz':npz_open,
                     '.csv':csv_open,
                     }
-        [self.time, self.data] = fileopen[splitext(self.data_file)[1]]()
+        [self.sensor_data.time, self.sensor_data.data] = fileopen[splitext(self.data_file)[1]]()
+        self.sensor_data.loaded = True
 
     def _plot_button_fired(self):
-        fig = plt.figure(1)
-        plt.plot(self.time,self.data[self.data.dtype.names[0]])
+        pad = 0.05
+        fig_width = 5.
+        ax_left = 0.18
+        ax_width = 0.75
+        
+        #Count how many axes need to be plotted
+        num_axes = 0 + self.sensor_data.loaded
+        if self.log_data.loaded:
+            num_axes += len(self.selected_params)
+        if not(num_axes):
+            print "No files loaded or no parameters selected.\n"
+            return
+        
+        fig_height = 2. * num_axes + 1.5
+        fig = plt.figure(1, figsize=[fig_width, fig_height])
+        fig.clf()
+
+        #calculate the geometry for displaying the axes
+        total_pad = pad * (num_axes + 1)
+        ax_height = (1. - total_pad) / num_axes
+        ax_bottom = np.linspace(pad, 1. - (ax_height + pad), num_axes)
+        ax_top = ax_bottom + ax_height
+        ax = {}
+
+        for i in range(num_axes - self.sensor_data.loaded):
+            ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
+            ax[i].plot(self.log_data.time - self.log_data.time[0], self.log_data.data[self.selected_params[i]])
+            ax[i].set_title(self.selected_params[i].replace('_', ' '))
+            #ax[i].set_ylabel(self.selected_param
+
+        i = num_axes-1
+        if self.sensor_data.loaded:
+            ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
+            names = self.sensor_data.data.dtype.names
+            ax[i].plot(self.sensor_data.time, self.sensor_data.data[names[0]], 'b', label=names[0])
+            ax[i].plot(self.sensor_data.time, self.sensor_data.data[names[1]], 'g', label=names[1])
+            ax[i].set_xlabel('Time (s)')
+            ax[i].set_ylabel('Output (raw)')
 
     def start(self):
         self.configure_traits(view='main_view')
