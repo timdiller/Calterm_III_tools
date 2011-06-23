@@ -91,9 +91,10 @@ class calterm_data_viewer(HasTraits):
         return [n.unit for n in self.parameters]
 
     channels = List(Channel)
-    selected_channels = List
     channel_names = Property(List(String), depends_on=['channels'])
     channel_gains = Property(List(String), depends_on=['channels'])
+    selected_channels = List
+    selected_channels_gains = Property(List(Float), depends_on=['selected_channels'])
     def _get_channel_names(self):
         return [n.name for n in self.channels]
     def _get_channel_gains(self):
@@ -103,6 +104,8 @@ class calterm_data_viewer(HasTraits):
         print self.channel_gains
         for n in range(self.channel_gains):
             self.channels[n].gain = channel_gains[n]
+    def _get_selected_channels_gains(self):
+        return [self.channel_gains[self.channel_names.index(n)] for n in self.selected_channels]
     
     ## UI elements
     align_button = Button()
@@ -266,15 +269,18 @@ class calterm_data_viewer(HasTraits):
 
         for i in range(num_axes - self.sensor_data.loaded):
             ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
-            ax[i].plot(self.log_data.time - self.log_data.time[0], self.log_data.data[self.selected_params[i]])
-            ax[i].set_title(self.selected_params[i].replace('_', ' '))
+            ax[i].plot(self.log_data.time - self.log_data.time[0],
+                       self.log_data.data[self.selected_params[i]])
+            ax[i].set_ylabel(self.selected_params[i].replace('_', ' '))
             #ax[i].set_ylabel(self.selected_param
 
         i = num_axes-1
         if self.sensor_data.loaded:
             ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
-            for n in self.selected_channels:
-                ax[i].plot(self.sensor_data.time, self.sensor_data.data[n], label=n.replace('_', ' '))
+            for j in range(len(self.selected_channels)):
+                ax[i].plot(self.sensor_data.time,
+                           self.sensor_data.data[self.selected_channels[j]] * self.selected_channels_gains[j],
+                           label=self.selected_channels[j].replace('_', ' '))
             ax[i].set_xlabel('Time (s)')
             ax[i].set_ylabel('Sensor Current (nA)')
             ax[i].legend(loc='best')
