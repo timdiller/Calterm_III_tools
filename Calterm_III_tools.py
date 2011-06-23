@@ -69,6 +69,9 @@ class Parameter(HasTraits):
     name = String
     unit = String
 
+class Channel(Parameter):
+    gain = Float
+
 class Data(HasTraits):
     loaded = Bool(False)
     data = np.asarray([])
@@ -78,24 +81,37 @@ class calterm_data_viewer(HasTraits):
     """
     """
 
-    ## from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-    ## from matplotlib.figure import Figure
-    ## from matplotlib.backends.backend_wx import NavigationToolbar2Wx
-
     parameters = List(Parameter)
     selected_params = List
     parameter_names = Property(List(String), depends_on=['parameters'])
-
+    parameter_units = Property(List(String), depends_on=['parameters'])
     def _get_parameter_names(self):
         return [n.name for n in self.parameters]
+    def _get_parameter_units(self):
+        return [n.unit for n in self.parameters]
+
+    channels = List(Channel)
+    selected_channels = List
+    channel_names = Property(List(String), depends_on=['channels'])
+    channel_gains = Property(List(String), depends_on=['channels'])
+    def _get_channel_names(self):
+        return [n.name for n in self.channels]
+    def _get_channel_gains(self):
+        return [n.gain for n in self.channels]
+    def _channel_gains_changed(self):
+        print "setting gains.\n"
+        print self.channel_gains
+        for n in range(self.channel_gains):
+            self.channels[n].gain = channel_gains[n]
     
     ## UI elements
     align_button = Button()
     plot_button = Button()
     save_button = Button()
     
-    load_data_button = Button()
-    load_log_button = Button()
+    param_select_button = Button()
+    channel_select_button = Button()
+    gain_set_button = Button()
 
     sensor_data = Data()
     log_data = Data()
@@ -109,16 +125,19 @@ class calterm_data_viewer(HasTraits):
                 Group(
                     Item(name = 'data_file',
                          style = 'simple'),
-                    ## Item('load_data_button',
-                    ##      label = 'Load',
-                    ##      show_label = False),
+                    Item('channel_select_button',
+                         label = 'Ch. Select',
+                         show_label = False),
+                    Item('gain_set_button',
+                         label = 'Gain Set',
+                         show_label = False),
                     orientation = 'horizontal'),
                 Group(
                     Item(name='log_file',
                          style='simple'),
-                    ## Item('load_log_button',
-                    ##      label='Load',
-                    ##      show_label=False),
+                    Item('param_select_button',
+                         label='Parameter Select',
+                         show_label=False),
                     orientation='horizontal'),
                 orientation='vertical'),
             Group(
@@ -146,9 +165,28 @@ class calterm_data_viewer(HasTraits):
                               left_column_title="Available parameters",
                               right_column_title="Parameters to plot")),
         title = "Select parameters to plot",
-        buttons = [OKButton])
+        buttons = [OKButton, CancelButton])
 
-#    def _load_log_button_fired(self):
+    channel_view = View(
+        Item(name='selected_channels',
+             show_label=False,
+             style='custom',
+             editor=SetEditor(name='channel_names',
+                              ordered=True,
+                              can_move_all=True,
+                              left_column_title="Available channels",
+                              right_column_title="Channels to plot")),
+        title = "Select channels to plot",
+        buttons = [OKButton, CancelButton])
+
+    gains_view = View(
+        Item(name='channels',
+             style='custom',
+#             editor=TableEditor()),
+             editor=ListEditor(use_notebook=True)),
+        title = "Set the gains for each channel",
+        buttons = [OKButton, CancelButton])
+
     def _log_file_changed(self):
         [p,u] = import_calterm_log_parameter_names(self.log_file)
         p_raw = p.split(',')
@@ -160,8 +198,19 @@ class calterm_data_viewer(HasTraits):
         [self.log_data.time, self.log_data.data] = import_calterm_log_file(self.log_file)
         self.log_data.loaded = True
 
+    def _param_select_button_fired(self):
+        self.configure_traits(view='parameter_view')
+
+    def _channel_select_button_fired(self):
+        self.configure_traits(view='channel_view')
+
+    def _gain_set_button_fired(self):
+        self.configure_traits(view='gains_view')
+
     def _data_file_changed(self):
         from os.path import splitext
+        DEFAULT_GAIN = 1.875 #nA/V
+        DEFAULT_UNIT = 'nA'
 
         def npz_open():
             npz = np.load(self.data_file)
@@ -185,7 +234,10 @@ class calterm_data_viewer(HasTraits):
                     '.csv':csv_open,
                     }
         [self.sensor_data.time, self.sensor_data.data] = fileopen[splitext(self.data_file)[1]]()
+        for i in self.sensor_data.data.dtype.names:
+            self.channels.append(Channel(name=i, gain=DEFAULT_GAIN, unit=DEFAULT_UNIT))
         self.sensor_data.loaded = True
+        self.configure_traits(view='channel_view')
 
     def _plot_button_fired(self):
         pad = 0.05
@@ -221,11 +273,10 @@ class calterm_data_viewer(HasTraits):
         i = num_axes-1
         if self.sensor_data.loaded:
             ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
-            names = self.sensor_data.data.dtype.names
-            ax[i].plot(self.sensor_data.time, self.sensor_data.data[names[0]], 'b', label=names[0])
-            ax[i].plot(self.sensor_data.time, self.sensor_data.data[names[1]], 'g', label=names[1])
+            for n in self.selected_channels:
+                ax[i].plot(self.sensor_data.time, self.sensor_data.data[n], label=n.replace('_', ' '))
             ax[i].set_xlabel('Time (s)')
-            ax[i].set_ylabel('Output (raw)')
+            ax[i].set_ylabel('Sensor Current (nA)')
             ax[i].legend(loc='best')
 
     def start(self):
