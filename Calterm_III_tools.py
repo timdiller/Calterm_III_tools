@@ -1,8 +1,8 @@
 import numpy as np
 
-from enthought.traits.api import * 
-from enthought.traits.ui.api import * #View,Group,Item
-from enthought.traits.ui.menu import OKButton,CancelButton
+from traits.api import * 
+from traits.ui.api import * #View,Group,Item
+from traits.ui.menu import OKButton,CancelButton
 #from enthought.chaco.api import * #Plot, ArrayPlotData, jet
 #from enthought.enable.api import *
 #from enthought.chaco.tools.api import *
