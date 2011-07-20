@@ -1,8 +1,7 @@
 import numpy as np
 
-from traits.api import * 
-from traits.ui.api import * #View,Group,Item
-from traits.ui.menu import OKButton,CancelButton
+from traits.api import HasTraits, Float, Bool, String, List, Property, File, Button
+from traitsui.api import View, Group, Item, OKButton, CancelButton, SetEditor, ListEditor
 #from enthought.chaco.api import * #Plot, ArrayPlotData, jet
 #from enthought.enable.api import *
 #from enthought.chaco.tools.api import *
@@ -63,7 +62,10 @@ def import_calterm_log_file(filename):
                       names=import_calterm_log_parameter_names(filename)[0],
                       converters={1:convert_date})
     f.close()
-    return [data['DLA_Timestamp'],data]
+    if 'DLA_Timestamp' in data.dtype.names:
+        return [data['DLA_Timestamp'], data]
+    else:
+        return 
 
 class Parameter(HasTraits):
     name = String
