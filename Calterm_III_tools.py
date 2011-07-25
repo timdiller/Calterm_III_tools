@@ -24,6 +24,36 @@ def convert_date(date_str):
                float(d[2])
     else:
         return float(d)
+def check_calterm_log_file_format(filename):
+    '''
+    Check to be sure the provided file has the proper format.
+    Calterm III log files typically have the following header:
+    
+    Log File Version ,2.3
+    6/16/2011 2:28:03 PM
+    Log Mode ,Log When Any Data Received
+    ,CaltermVersion,3.2.0.023
+    ,ScreenMonitorType,RequestReceive
+    ,Initial Monitor Rate,1 Milliseconds
+    --------------------------
+    Parameter Name, ...
+    Units, ...
+    Source Address, ...
+    '''
+    f = open(filename)
+    header_first_word = []
+    for i in range(11):
+        header_first_word.append(f.readline().split(',')[0])
+    f.close()
+
+    if header_first_word[7:10] == ['Parameter Name','Units','Source Address']:
+        err = None
+    else:
+        err = "File not written by Calterm III. Try *.log.csv file"
+        print err
+        print header_first_word
+    return err
+
 
 def import_calterm_log_parameter_names(filename):
     '''
@@ -32,6 +62,7 @@ def import_calterm_log_parameter_names(filename):
     To use the names as a list use n.split(",").
     '''
     f = open(filename)
+    header = []
     for i in range(7):
         f.readline()
     names_raw = f.readline()
@@ -54,18 +85,24 @@ def import_calterm_log_file(filename):
     etc.
     '''
     
-    f = open(filename)
-    data = np.genfromtxt(f, delimiter=',',
-                      unpack=True,
-                      skip_header=10,
-                      usecols=range(1,38),
-                      names=import_calterm_log_parameter_names(filename)[0],
-                      converters={1:convert_date})
-    f.close()
-    if 'DLA_Timestamp' in data.dtype.names:
-        return [data['DLA_Timestamp'], data]
+    err = check_calterm_log_file_format(filename)
+    if err:
+        print err
+        return [None, None, err]
     else:
-        return 
+        f = open(filename)
+        data = np.genfromtxt(f, delimiter=',',
+                             unpack=True,
+                             skip_header=10,
+                             usecols=range(1,38),
+                             names=import_calterm_log_parameter_names(filename)[0],
+                             converters={1:convert_date})
+        f.close()
+        if 'DLA_Timestamp' in data.dtype.names:
+            return [data['DLA_Timestamp'], data, err]
+        else:
+            print "DLA_Timestamp not found. Parameters found include the following:"
+            print data.dtype.names
 
 class Parameter(HasTraits):
     name = String
@@ -193,15 +230,19 @@ class calterm_data_viewer(HasTraits):
         buttons = [OKButton, CancelButton])
 
     def _log_file_changed(self):
-        [p,u] = import_calterm_log_parameter_names(self.log_file)
-        p_raw = p.split(',')
-        u_raw = u.split(',')
-        self.parameters = []
-        for i in range(len(p_raw)):
-            self.parameters.append(Parameter(name=p_raw[i], unit=u_raw[i]))
-        self.configure_traits(view='parameter_view')
-        [self.log_data.time, self.log_data.data] = import_calterm_log_file(self.log_file)
-        self.log_data.loaded = True
+        [self.log_data.time, self.log_data.data, err] = import_calterm_log_file(self.log_file)
+        if not err:
+            self.log_data.loaded = True
+            [p,u] = import_calterm_log_parameter_names(self.log_file)
+            p_raw = p.split(',')
+            u_raw = u.split(',')
+            self.parameters = []
+            for i in range(len(p_raw)):
+                self.parameters.append(Parameter(name=p_raw[i], unit=u_raw[i]))
+            self.configure_traits(view='parameter_view')
+        else:
+            print "Deal with the error here."
+            self.log_data.loaded = False
 
     def _param_select_button_fired(self):
         self.configure_traits(view='parameter_view')
