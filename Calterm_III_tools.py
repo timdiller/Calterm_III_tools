@@ -123,6 +123,9 @@ class Data(HasTraits):
         
 class calterm_data_viewer(HasTraits):
     """
+    This is the user interface for plotting results from data acquisition
+    supplemented with log file data from Calterm III, the Cummins ECM
+    interface application.
     """
 
     parameters = List(Parameter)
