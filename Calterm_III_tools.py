@@ -125,7 +125,7 @@ class calterm_data_viewer(HasTraits):
     """
     This is the user interface for plotting results from data acquisition
     supplemented with log file data from Calterm III, the Cummins ECM
-    interface application.
+    interface application. The UI is built with Enthought's Traits and TraitsUI
     """
 
     parameters = List(Parameter)
