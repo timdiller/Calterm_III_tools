@@ -1,7 +1,12 @@
+
 import numpy as np
 
-from traits.api import HasTraits, Float, Bool, String, List, Property, File, Button
-from traitsui.api import View, Group, Item, OKButton, CancelButton, SetEditor, ListEditor
+from traits.api \
+    import HasTraits, Float, Bool, String, List, Property, File, \
+    Button, Str
+from traitsui.api \
+    import View, Group, Item, OKButton, CancelButton, SetEditor, \
+    ListEditor, StatusItem
 #from enthought.chaco.api import * #Plot, ArrayPlotData, jet
 #from enthought.enable.api import *
 #from enthought.chaco.tools.api import *
@@ -161,6 +166,15 @@ class calterm_data_viewer(HasTraits):
     data_file = File(filter = ['csv'])
     log_file = File(filter = ['csv'])
 
+    # The text being edited:
+    text = Str
+
+    # The current length of the text being edited:
+    length = Property( depends_on = 'text' )
+
+    # The current time:
+    time = Str
+
     main_view = View(
         Group(
             Group(
@@ -194,6 +208,7 @@ class calterm_data_viewer(HasTraits):
                      show_label=False),
                 orientation="vertical"),
             orientation="horizontal"),
+        statusbar = [ StatusItem( name = 'time',   width = 85 ) ],
         title = "Calterm III data alignment and analysis",
         buttons = [OKButton])
 
