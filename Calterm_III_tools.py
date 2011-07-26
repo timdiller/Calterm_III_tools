@@ -169,6 +169,9 @@ class calterm_data_viewer(HasTraits):
     data_file = File(filter = ['csv'])
     log_file = File(filter = ['csv'])
 
+    data_file_status = Str('none loaded')
+    log_file_status = Str('none loaded')
+
     # The text being edited:
     text = Str
 
@@ -211,7 +214,8 @@ class calterm_data_viewer(HasTraits):
                      show_label=False),
                 orientation="vertical"),
             orientation="horizontal"),
-        statusbar = [ StatusItem( name = 'time',   width = 85 ) ],
+        statusbar = [StatusItem(name = 'data_file_status', width=85),
+                     StatusItem(name = 'log_file_status', width=85)],
         title = "Calterm III data alignment and analysis",
         buttons = [OKButton])
 
