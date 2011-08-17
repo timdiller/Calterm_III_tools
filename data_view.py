@@ -19,18 +19,11 @@ class Channel(Parameter):
     gain = Float
 
 
-class Data(HasTraits):
+class DataSource(HasTraits):
     loaded = Bool(False)
     data = np.asarray([])
     time = np.asarray([])
-
-
-class calterm_data_viewer(HasTraits):
-    """
-    This is the user interface for plotting results from data acquisition
-    supplemented with log file data from Calterm III, the Cummins ECM
-    interface application. The UI is built with Enthought's Traits and TraitsUI
-    """
+    
     parameters = List(Parameter)
     selected_params = List
     parameter_names = Property(List(String), depends_on=['parameters'])
@@ -42,14 +35,6 @@ class calterm_data_viewer(HasTraits):
     selected_channels = List
     selected_channels_gains = Property(List(Float),
                                        depends_on=['selected_channels'])
-    ## UI elements
-    align_button = Button()
-    plot_button = Button()
-    save_button = Button()
-
-    param_select_button = Button()
-    channel_select_button = Button()
-    gain_set_button = Button()
 
     sensor_data = Data()
     log_data = Data()
@@ -60,14 +45,59 @@ class calterm_data_viewer(HasTraits):
     data_file_status = Str('none loaded')
     log_file_status = Str('none loaded')
 
-    # The text being edited:
-    text = Str
+    def _get_parameter_names(self):
+        return [n.name for n in self.parameters]
 
-    # The current length of the text being edited:
-    length = Property(depends_on='text')
+    def _get_parameter_units(self):
+        return [n.unit for n in self.parameters]
 
-    # The current time:
-    time = Str
+    def _get_channel_names(self):
+        return [n.name for n in self.channels]
+
+    def _get_channel_gains(self):
+        return [n.gain for n in self.channels]
+
+    def _channel_gains_changed(self):
+        print "setting gains.\n"
+        print self.channel_gains
+        for n in range(self.channel_gains):
+            self.channels[n].gain = channel_gains[n]
+
+    def _get_selected_channels_gains(self):
+        return [self.channel_gains[self.channel_names.index(n)]
+                for n in self.selected_channels]
+
+    def _log_file_changed(self):
+        [self.log_data.time, self.log_data.data, err] = \
+                             import_calterm_log_file(self.log_file)
+        if not err:
+            self.log_data.loaded = True
+            [p, u] = import_calterm_log_param_names(self.log_file)
+            p_raw = p.split(',')
+            u_raw = u.split(',')
+            self.parameters = []
+            for i in range(len(p_raw)):
+                self.parameters.append(Parameter(name=p_raw[i], unit=u_raw[i]))
+            self.configure_traits(view='parameter_view')
+        else:
+            print "Deal with the error here."
+            self.log_data.loaded = False
+
+
+class calterm_data_viewer(HasTraits):
+    """
+    This is the user interface for plotting results from data acquisition
+    supplemented with log file data from Calterm III, the Cummins ECM
+    interface application. The UI is built with Enthought's Traits and TraitsUI
+    """
+    ## UI elements
+    align_button = Button()
+    plot_button = Button()
+    save_button = Button()
+
+    param_select_button = Button()
+    channel_select_button = Button()
+    gain_set_button = Button()
 
     main_view = View(
         Group(
@@ -138,44 +168,6 @@ class calterm_data_viewer(HasTraits):
              editor=ListEditor(use_notebook=True)),
         title="Set the gains for each channel",
         buttons=[OKButton, CancelButton])
-
-    def _get_parameter_names(self):
-        return [n.name for n in self.parameters]
-
-    def _get_parameter_units(self):
-        return [n.unit for n in self.parameters]
-
-    def _get_channel_names(self):
-        return [n.name for n in self.channels]
-
-    def _get_channel_gains(self):
-        return [n.gain for n in self.channels]
-
-    def _channel_gains_changed(self):
-        print "setting gains.\n"
-        print self.channel_gains
-        for n in range(self.channel_gains):
-            self.channels[n].gain = channel_gains[n]
-
-    def _get_selected_channels_gains(self):
-        return [self.channel_gains[self.channel_names.index(n)]
-                for n in self.selected_channels]
-
-    def _log_file_changed(self):
-        [self.log_data.time, self.log_data.data, err] = \
-                             import_calterm_log_file(self.log_file)
-        if not err:
-            self.log_data.loaded = True
-            [p, u] = import_calterm_log_param_names(self.log_file)
-            p_raw = p.split(',')
-            u_raw = u.split(',')
-            self.parameters = []
-            for i in range(len(p_raw)):
-                self.parameters.append(Parameter(name=p_raw[i], unit=u_raw[i]))
-            self.configure_traits(view='parameter_view')
-        else:
-            print "Deal with the error here."
-            self.log_data.loaded = False
 
     def _param_select_button_fired(self):
         self.configure_traits(view='parameter_view')
