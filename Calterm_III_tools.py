@@ -11,8 +11,6 @@ from traitsui.api \
 #from enthought.enable.api import *
 #from enthought.chaco.tools.api import *
 ##import wx
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 ##mpl.use('WXAgg',warn=False)
 
 def convert_date(date_str):
@@ -78,8 +76,8 @@ def import_calterm_log_parameter_names(filename):
 def import_calterm_log_file(filename):
     '''
     Open a comma-separated-variable file output by Cummins Calterm III
-    software and return a time arrary and a structured, named array for the other
-    parameters.
+    software and return a time arrary and a structured, named array
+    for the other parameters.
     The Calterm III log file has 10 header lines. The variable names are given
     on the 8th line, the units on the 9th, and the memory address on the 10th.
     The returned result is an ndarray with named dtypes. The columns can be
@@ -97,11 +95,11 @@ def import_calterm_log_file(filename):
     else:
         f = open(filename)
         data = np.genfromtxt(f, delimiter=',',
-                             unpack=True,
-                             skip_header=10,
-                             usecols=range(1,38),
-                             names=import_calterm_log_parameter_names(filename)[0],
-                             converters={1:convert_date})
+                unpack=True,
+                skip_header=10,
+                usecols=range(1,38),
+                names=import_calterm_log_parameter_names(filename)[0],
+                converters={1:convert_date})
         f.close()
         if 'DLA_Timestamp' in data.dtype.names:
             return [data['DLA_Timestamp'], data, err]
@@ -308,13 +306,17 @@ class calterm_data_viewer(HasTraits):
         self.configure_traits(view='channel_view')
 
     def _plot_button_fired(self):
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+
         pad = 0.05
         fig_width = 8.5
         ax_left = 0.18
         ax_width = 0.75
         
         #Count how many axes need to be plotted
-        num_axes = 0 + self.sensor_data.loaded
+        num_axes = 0 + self.sensor_data.loaded            #ax[i].set_ylabel(self.selected_param
+
         if self.log_data.loaded:
             num_axes += len(self.selected_params)
         if not(num_axes):
@@ -337,18 +339,19 @@ class calterm_data_viewer(HasTraits):
             ax[i].plot(self.log_data.time - self.log_data.time[0],
                        self.log_data.data[self.selected_params[i]])
             ax[i].set_ylabel(self.selected_params[i].replace('_', ' '))
-            #ax[i].set_ylabel(self.selected_param
 
         i = num_axes-1
         if self.sensor_data.loaded:
             ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
             for j in range(len(self.selected_channels)):
                 ax[i].plot(self.sensor_data.time,
-                           self.sensor_data.data[self.selected_channels[j]] * self.selected_channels_gains[j],
+                           self.sensor_data.data[self.selected_channels[j]] \
+                           * self.selected_channels_gains[j],
                            label=self.selected_channels[j].replace('_', ' '))
             ax[i].set_xlabel('Time (s)')
             ax[i].set_ylabel('Sensor Current (nA)')
             ax[i].legend(loc='best')
+        fig.show()
 
     def start(self):
         self.configure_traits(view='main_view')
