@@ -1,0 +1,5 @@
+CalTerm_III_tools is an application for combining and plotting data
+from multiple csv files.
+Two sample files are included in the repo with representative data,
+one is a log file, and the other has sensor data recorded
+simultaneously with a separate DAQ system.
