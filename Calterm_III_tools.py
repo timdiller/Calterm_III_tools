@@ -62,7 +62,7 @@ def import_calterm_log_param_names(filename):
     return [names_raw.strip('\r\n'), units_raw.strip('\r\n')]
 
 
-def import_calterm_log_file(filename):
+def calterm_log_open(filename):
     '''
     Open a comma-separated-variable file output by Cummins Calterm III
     software and return a time arrary and a structured, named array
@@ -100,3 +100,70 @@ def import_calterm_log_file(filename):
             return [None, None, err]
 
 
+def npz_open(filename):
+    '''
+    If the file has an npz format, then look for arrays named 'time'
+    and 'data'. Check this is so, and pass them back.
+    '''
+    from numpy import load
+    npz = load(filename)
+    if 'time' and 'data' in npz.files:
+        return(npz['time'], npz['data'], None)
+    else:
+        return None, None, "Error: did not find 'time' and 'data' " \
+               "in the save file."
+
+
+def csv_open(filename):
+    '''
+    If the filename ends in .csv with no .log prepension, then
+    assume that it was written by Tim Diller's LabView program, which
+    has a three-line header:
+        date string
+        time step
+        comma-separated list of channel names
+    time array is constructed from the reported time step
+    '''
+    from re import split
+    from numpy import genfromtxt, linspace
+    
+    f = open(filename)
+    date_str = f.readline()
+    step_str = f.readline()
+    [a, b] = split("=", step_str.strip('\r\n'))
+    step = float(b)
+    del a, b
+    data = genfromtxt(f, delimiter=',', unpack=True, names=True)
+    f.close()
+    length = data.shape[0]
+    time = linspace(0, step * (length - 1), length)
+    return(time, data, None)
+
+
+def open_DAQ_file(filename):
+    '''
+    Open a file intelligently based on its filename extension and header
+    format.
+    returns (time, data, err)
+    time - ndarray of time values for each row in data. time is either
+           parsed from a time stamp or constructed based on the time step
+    data - structured ndarray with column names in data.dtype.names
+    '''
+    from os.path import splitext
+
+    def csv_check(filename):
+        root, ext = splitext(filename)
+        print root, ext
+        root, ext = splitext(root)
+        print root, ext
+        if ext == '.log':
+            time, data, err = calterm_log_open(filename)
+        else:
+            time, data, err = csv_open(filename)
+        return time, data, err
+
+    fileopen = {'.npz': npz_open,
+                '.csv': csv_check}
+
+    root, ext = splitext(filename)
+    return fileopen[ext](filename)
