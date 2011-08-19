@@ -6,82 +6,102 @@ from traits.api \
 from traitsui.api \
      import View, Group, Item, OKButton, CancelButton, SetEditor, \
      ListEditor, StatusItem
+from chaco.api \
+     import ArrayPlotData, Plot
+
 from Calterm_III_tools \
      import convert_DLA, check_calterm_log_file_format, \
      import_calterm_log_param_names, import_calterm_log_file
 
-class Parameter(HasTraits):
+class Channel(HasTraits):
     name = String
     unit = String
+    gain = Float(1.0)
 
-
-class Channel(Parameter):
-    gain = Float
+#class Channel(Parameter):
+    
 
 
 class DataSource(HasTraits):
-    loaded = Bool(False)
-    data = np.asarray([])
-    time = np.asarray([])
-    
-    parameters = List(Parameter)
-    selected_params = List
-    parameter_names = Property(List(String), depends_on=['parameters'])
-    parameter_units = Property(List(String), depends_on=['parameters'])
+    #loaded = Bool(False)
+    a_p_data = ArrayPlotData()
+    #time = np.asarray([])
 
-    channels = List(Channel)
-    channel_names = Property(List(String), depends_on=['channels'])
-    channel_gains = Property(List(String), depends_on=['channels'])
-    selected_channels = List
-    selected_channels_gains = Property(List(Float),
-                                       depends_on=['selected_channels'])
+    ## channels = List(Channel)
+    ## channels_disp = List
+    ## channel_names = Property(List(String), depends_on=['channels'])
+    ## channel_units = Property(List(String), depends_on=['channels'])
 
-    sensor_data = Data()
-    log_data = Data()
+    ## channels = List(Channel)
+    ## channel_names = Property(List(String), depends_on=['channels'])
+    ## channel_gains = Property(List(String), depends_on=['channels'])
+    ## selected_channels = List
+    ## selected_channels_gains = Property(List(Float),
+    ##                                    depends_on=['selected_channels'])
 
-    data_file = File(filter=['csv'])
-    log_file = File(filter=['csv'])
+    ## sensor_data = Data()
+    ## log_data = Data()
 
-    data_file_status = Str('none loaded')
-    log_file_status = Str('none loaded')
+    file_name = File(filter=['csv'])
+    ## log_file = File(filter=['csv'])
 
-    def _get_parameter_names(self):
-        return [n.name for n in self.parameters]
-
-    def _get_parameter_units(self):
-        return [n.unit for n in self.parameters]
+    ## data_file_status = Str('none loaded')
+    ## log_file_status = Str('none loaded')
 
     def _get_channel_names(self):
-        return [n.name for n in self.channels]
+        return [n.name for n in self.parameters]
 
-    def _get_channel_gains(self):
-        return [n.gain for n in self.channels]
+    ## def _get_parameter_units(self):
+    ##     return [n.unit for n in self.parameters]
 
-    def _channel_gains_changed(self):
-        print "setting gains.\n"
-        print self.channel_gains
-        for n in range(self.channel_gains):
-            self.channels[n].gain = channel_gains[n]
+    ## def _get_channel_names(self):
+    ##     return [n.name for n in self.channels]
 
-    def _get_selected_channels_gains(self):
-        return [self.channel_gains[self.channel_names.index(n)]
-                for n in self.selected_channels]
+    ## def _get_channel_gains(self):
+    ##     return [n.gain for n in self.channels]
 
-    def _log_file_changed(self):
-        [self.log_data.time, self.log_data.data, err] = \
-                             import_calterm_log_file(self.log_file)
+    ## def _channel_gains_changed(self):
+    ##     print "setting gains.\n"
+    ##     print self.channel_gains
+    ##     for n in range(self.channel_gains):
+    ##         self.channels[n].gain = channel_gains[n]
+
+    ## def _get_selected_channels_gains(self):
+    ##     return [self.channel_gains[self.channel_names.index(n)]
+    ##             for n in self.selected_channels]
+
+    def _file_name_changed(self):
+        time, data, err = open_DAQ_file(filename)
         if not err:
-            self.log_data.loaded = True
-            [p, u] = import_calterm_log_param_names(self.log_file)
-            p_raw = p.split(',')
-            u_raw = u.split(',')
-            self.parameters = []
-            for i in range(len(p_raw)):
-                self.parameters.append(Parameter(name=p_raw[i], unit=u_raw[i]))
-            self.configure_traits(view='parameter_view')
+            a_p_data.set_data('time',time)
+            for name in data.dtype.names:
+                a_p_data.set_data(name,data[name])
+            ##self.log_data.loaded = True
+            ##[p, u] = import_calterm_log_param_names(self.log_file)
+            ##p_raw = p.split(',')
+            ##u_raw = u.split(',')
+            ##self.parameters = []
+            ##for i in range(len(p_raw)):
+            ##    self.parameters.append(Parameter(name=p_raw[i], unit=u_raw[i]))
+            ##self.configure_traits(view='parameter_view')
         else:
             print "Deal with the error here."
-            self.log_data.loaded = False
+            ##self.log_data.loaded = False
+
+                #def _data_file_changed(self):
+        ## from os.path import splitext
+        ## DEFAULT_GAIN = 1.875  ## nA/V
+        ## DEFAULT_UNIT = 'nA'
+
+        ## [self.sensor_data.time, self.sensor_data.data] = \
+        ##                         fileopen[splitext(self.data_file)[1]]()
+        ## for i in self.sensor_data.data.dtype.names:
+        ##     self.channels.append(Channel(name=i,
+        ##                                  gain=DEFAULT_GAIN,
+        ##                                  unit=DEFAULT_UNIT))
+        ## self.sensor_data.loaded = True
+        ## self.configure_traits(view='channel_view')
+
 
 
 class calterm_data_viewer(HasTraits):
@@ -177,41 +197,6 @@ class calterm_data_viewer(HasTraits):
 
     def _gain_set_button_fired(self):
         self.configure_traits(view='gains_view')
-
-    def _data_file_changed(self):
-        from os.path import splitext
-        DEFAULT_GAIN = 1.875  ## nA/V
-        DEFAULT_UNIT = 'nA'
-
-        def npz_open():
-            npz = np.load(self.data_file)
-            return([npz['time'], npz['data']])
-
-        def csv_open():
-            import re
-            f = open(self.data_file)
-            date_str = f.readline()
-            step_str = f.readline()
-            [a, b] = re.split("=", step_str.strip('\r\n'))
-            step = float(b)
-            del a, b
-            data = np.genfromtxt(f, delimiter=',', unpack=True, names=True)
-            f.close()
-            length = data.shape[0]
-            time = np.linspace(0, step * (length - 1), length)
-            return([time, data])
-
-        fileopen = {'.npz': npz_open,
-                    '.csv': csv_open,
-                    }
-        [self.sensor_data.time, self.sensor_data.data] = \
-                                fileopen[splitext(self.data_file)[1]]()
-        for i in self.sensor_data.data.dtype.names:
-            self.channels.append(Channel(name=i,
-                                         gain=DEFAULT_GAIN,
-                                         unit=DEFAULT_UNIT))
-        self.sensor_data.loaded = True
-        self.configure_traits(view='channel_view')
 
     def _plot_button_fired(self):
         import matplotlib as mpl
