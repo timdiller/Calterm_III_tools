@@ -1,4 +1,5 @@
 import numpy as np
+from os.path import basename
 
 from traits.api \
      import Bool, Button, File, Float, HasTraits, Instance, List, \
@@ -47,7 +48,7 @@ class DataSource(HasTraits):
     ## log_file_status = Str('none loaded')
 
     def __repr__(self):
-        return self.file_name
+        return basename(self.file_name)
 
     def _get_channel_names(self):
         return [n.name for n in self.parameters]
@@ -77,14 +78,6 @@ class DataSource(HasTraits):
             self.a_p_data.set_data('time',time)
             for name in data.dtype.names:
                 self.a_p_data.set_data(name,data[name])
-            ##self.log_data.loaded = True
-            ##[p, u] = import_calterm_log_param_names(self.log_file)
-            ##p_raw = p.split(',')
-            ##u_raw = u.split(',')
-            ##self.parameters = []
-            ##for i in range(len(p_raw)):
-            ##    self.parameters.append(Parameter(name=p_raw[i], unit=u_raw[i]))
-            ##self.configure_traits(view='parameter_view')
         else:
             print "Deal with the error here."
             ##self.log_data.loaded = False
@@ -121,19 +114,16 @@ class calterm_data_viewer(HasTraits):
     #channel_select_button = Button()
     #gain_set_button = Button()
 
-    open_button = Button()
     data_source_list = List(Instance(DataSource))
-    #d_s = Instance(DataSource, args=())
 
     main_view = View(
         Group(
-            Item(name='data_source_list',
-                 editor=ListStrEditor(),
-                 ),
-            Item(name='file_to_open'),
             Group(
+                Item(name='data_source_list',
+                     style='readonly',
+                     editor=ListStrEditor()),
+                Item(name='file_to_open'),
                 Group(
-#                    Item(name='data_file', style='simple'),
 #                    Item('channel_select_button',
 #                         label='Ch. Select',
 #                         show_label=False),
@@ -161,17 +151,18 @@ class calterm_data_viewer(HasTraits):
                      show_label=False),
                 orientation="vertical"),
             orientation="horizontal"),
-#        statusbar=[StatusItem(name='data_file_status', width=85),
-#                     StatusItem(name='log_file_status', width=85)],
         title="Calterm III data alignment and analysis",
         height=200,
         buttons=[OKButton])
 
     def _file_to_open_changed(self):
+        if self.file_to_open == '':
+            return
         d_s = DataSource(file_name = self.file_to_open)
         self.data_source_list.append(d_s)
+        self.file_to_open = ''
 
-    ##file_open_view = View(Item(d_s.file_name))
+    file_open_view = View(Item(name='file_to_open'))
 
 ##     parameter_view = View(
 ##         Item(name='selected_params',
