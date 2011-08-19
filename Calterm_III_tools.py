@@ -153,9 +153,7 @@ def open_DAQ_file(filename):
 
     def csv_check(filename):
         root, ext = splitext(filename)
-        print root, ext
         root, ext = splitext(root)
-        print root, ext
         if ext == '.log':
             time, data, err = calterm_log_open(filename)
         else:
