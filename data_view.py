@@ -1,17 +1,16 @@
 import numpy as np
 
 from traits.api \
-     import HasTraits, Float, Bool, String, List, Property, File, \
-     Button, Str
+     import Bool, Button, File, Float, HasTraits, Instance, List, \
+     Property, String
 from traitsui.api \
-     import View, Group, Item, OKButton, CancelButton, SetEditor, \
-     ListEditor, StatusItem
+     import CancelButton, Group, Item, ListEditor, OKButton, SetEditor, \
+     StatusItem, View, ListStrEditor
 from chaco.api \
      import ArrayPlotData, Plot
 
 from Calterm_III_tools \
-     import convert_DLA, check_calterm_log_file_format, \
-     import_calterm_log_param_names, import_calterm_log_file
+     import open_DAQ_file
 
 class Channel(HasTraits):
     name = String
@@ -19,7 +18,6 @@ class Channel(HasTraits):
     gain = Float(1.0)
 
 #class Channel(Parameter):
-    
 
 
 class DataSource(HasTraits):
@@ -48,6 +46,9 @@ class DataSource(HasTraits):
     ## data_file_status = Str('none loaded')
     ## log_file_status = Str('none loaded')
 
+    def __repr__(self):
+        return self.file_name
+
     def _get_channel_names(self):
         return [n.name for n in self.parameters]
 
@@ -70,12 +71,12 @@ class DataSource(HasTraits):
     ##     return [self.channel_gains[self.channel_names.index(n)]
     ##             for n in self.selected_channels]
 
-    def _file_name_changed(self):
+    def _file_name_changed(self, filename):
         time, data, err = open_DAQ_file(filename)
         if not err:
-            a_p_data.set_data('time',time)
+            self.a_p_data.set_data('time',time)
             for name in data.dtype.names:
-                a_p_data.set_data(name,data[name])
+                self.a_p_data.set_data(name,data[name])
             ##self.log_data.loaded = True
             ##[p, u] = import_calterm_log_param_names(self.log_file)
             ##p_raw = p.split(',')
@@ -111,39 +112,47 @@ class calterm_data_viewer(HasTraits):
     interface application. The UI is built with Enthought's Traits and TraitsUI
     """
     ## UI elements
-    align_button = Button()
+    #align_button = Button()
     plot_button = Button()
     save_button = Button()
+    file_to_open = File()
 
-    param_select_button = Button()
-    channel_select_button = Button()
-    gain_set_button = Button()
+    #param_select_button = Button()
+    #channel_select_button = Button()
+    #gain_set_button = Button()
+
+    open_button = Button()
+    data_source_list = List(Instance(DataSource))
+    #d_s = Instance(DataSource, args=())
 
     main_view = View(
         Group(
+            Item(name='data_source_list',
+                 editor=ListStrEditor(),
+                 ),
+            Item(name='file_to_open'),
             Group(
                 Group(
-                    Item(name='data_file',
-                         style='simple'),
-                    Item('channel_select_button',
-                         label='Ch. Select',
-                         show_label=False),
-                    Item('gain_set_button',
-                         label='Gain Set',
-                         show_label=False),
+#                    Item(name='data_file', style='simple'),
+#                    Item('channel_select_button',
+#                         label='Ch. Select',
+#                         show_label=False),
+#                    Item('gain_set_button',
+#                         label='Gain Set',
+#                         show_label=False),
                     orientation='horizontal'),
                 Group(
-                    Item(name='log_file',
-                         style='simple'),
-                    Item('param_select_button',
-                         label='Parameter Select',
-                         show_label=False),
+#                    Item(name='log_file',
+#                         style='simple'),
+#                    Item('param_select_button',
+#                         label='Parameter Select',
+#                         show_label=False),
                     orientation='horizontal'),
                 orientation='vertical'),
             Group(
-                Item(name='align_button',
-                     label="Align Data",
-                     show_label=False),
+#                Item(name='align_button',
+#                     label="Align Data",
+#                     show_label=False),
                 Item(name='plot_button',
                      label="Plot",
                      show_label=False),
@@ -152,100 +161,107 @@ class calterm_data_viewer(HasTraits):
                      show_label=False),
                 orientation="vertical"),
             orientation="horizontal"),
-        statusbar=[StatusItem(name='data_file_status', width=85),
-                     StatusItem(name='log_file_status', width=85)],
+#        statusbar=[StatusItem(name='data_file_status', width=85),
+#                     StatusItem(name='log_file_status', width=85)],
         title="Calterm III data alignment and analysis",
+        height=200,
         buttons=[OKButton])
 
-    parameter_view = View(
-        Item(name='selected_params',
-             show_label=False,
-             style='custom',
-             editor=SetEditor(name='parameter_names',
-                              ordered=True,
-                              can_move_all=True,
-                              left_column_title="Available parameters",
-                              right_column_title="Parameters to plot")),
-        title="Select parameters to plot",
-        buttons=[OKButton, CancelButton])
+    def _file_to_open_changed(self):
+        d_s = DataSource(file_name = self.file_to_open)
+        self.data_source_list.append(d_s)
 
-    channel_view = View(
-        Item(name='selected_channels',
-             show_label=False,
-             style='custom',
-             editor=SetEditor(name='channel_names',
-                              ordered=True,
-                              can_move_all=True,
-                              left_column_title="Available channels",
-                              right_column_title="Channels to plot")),
-        title="Select channels to plot",
-        buttons=[OKButton, CancelButton])
+    ##file_open_view = View(Item(d_s.file_name))
 
-    gains_view = View(
-        Item(name='channels',
-             style='custom',
-#             editor=TableEditor()),
-             editor=ListEditor(use_notebook=True)),
-        title="Set the gains for each channel",
-        buttons=[OKButton, CancelButton])
+##     parameter_view = View(
+##         Item(name='selected_params',
+##              show_label=False,
+##              style='custom',
+##              editor=SetEditor(name='parameter_names',
+##                               ordered=True,
+##                               can_move_all=True,
+##                               left_column_title="Available parameters",
+##                               right_column_title="Parameters to plot")),
+##         title="Select parameters to plot",
+##         buttons=[OKButton, CancelButton])
 
-    def _param_select_button_fired(self):
-        self.configure_traits(view='parameter_view')
+##     channel_view = View(
+##         Item(name='selected_channels',
+##              show_label=False,
+##              style='custom',
+##              editor=SetEditor(name='channel_names',
+##                               ordered=True,
+##                               can_move_all=True,
+##                               left_column_title="Available channels",
+##                               right_column_title="Channels to plot")),
+##         title="Select channels to plot",
+##         buttons=[OKButton, CancelButton])
 
-    def _channel_select_button_fired(self):
-        self.configure_traits(view='channel_view')
+##     gains_view = View(
+##         Item(name='channels',
+##              style='custom',
+## #             editor=TableEditor()),
+##              editor=ListEditor(use_notebook=True)),
+##         title="Set the gains for each channel",
+##         buttons=[OKButton, CancelButton])
 
-    def _gain_set_button_fired(self):
-        self.configure_traits(view='gains_view')
+    ## def _param_select_button_fired(self):
+    ##     self.configure_traits(view='parameter_view')
 
-    def _plot_button_fired(self):
-        import matplotlib as mpl
-        import matplotlib.pyplot as plt
+    ## def _channel_select_button_fired(self):
+    ##     self.configure_traits(view='channel_view')
 
-        pad = 0.05
-        fig_width = 8.5
-        ax_left = 0.18
-        ax_width = 0.75
+    ## def _gain_set_button_fired(self):
+    ##     self.configure_traits(view='gains_view')
 
-        #Count how many axes need to be plotted
-        num_axes = 0 + self.sensor_data.loaded
-        #ax[i].set_ylabel(self.selected_param
+    ## def _plot_button_fired(self):
+    ##     import matplotlib as mpl
+    ##     import matplotlib.pyplot as plt
 
-        if self.log_data.loaded:
-            num_axes += len(self.selected_params)
-        if not(num_axes):
-            print "No files loaded or no parameters selected.\n"
-            return
+    ##     pad = 0.05
+    ##     fig_width = 8.5
+    ##     ax_left = 0.18
+    ##     ax_width = 0.75
 
-        fig_height = 11   ## 2. * num_axes + 1.5
-        fig = plt.figure(1, figsize=[fig_width, fig_height])
-        fig.clf()
+    ##     #Count how many axes need to be plotted
+    ##     num_axes = 0 + self.sensor_data.loaded
+    ##     #ax[i].set_ylabel(self.selected_param
 
-        #calculate the geometry for displaying the axes
-        total_pad = pad * (num_axes + 1)
-        ax_height = (1. - total_pad) / num_axes
-        ax_bottom = np.linspace(pad, 1. - (ax_height + pad), num_axes)
-        ax_top = ax_bottom + ax_height
-        ax = {}
+    ##     if self.log_data.loaded:
+    ##         num_axes += len(self.selected_params)
+    ##     if not(num_axes):
+    ##         print "No files loaded or no parameters selected.\n"
+    ##         return
 
-        for i in range(num_axes - self.sensor_data.loaded):
-            ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
-            ax[i].plot(self.log_data.time - self.log_data.time[0],
-                       self.log_data.data[self.selected_params[i]])
-            ax[i].set_ylabel(self.selected_params[i].replace('_', ' '))
+    ##     fig_height = 11   ## 2. * num_axes + 1.5
+    ##     fig = plt.figure(1, figsize=[fig_width, fig_height])
+    ##     fig.clf()
 
-        i = num_axes - 1
-        if self.sensor_data.loaded:
-            ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
-            for j in range(len(self.selected_channels)):
-                ax[i].plot(self.sensor_data.time,
-                           self.sensor_data.data[self.selected_channels[j]] \
-                           * self.selected_channels_gains[j],
-                           label=self.selected_channels[j].replace('_', ' '))
-            ax[i].set_xlabel('Time (s)')
-            ax[i].set_ylabel('Sensor Current (nA)')
-            ax[i].legend(loc='best')
-        fig.show()
+    ##     #calculate the geometry for displaying the axes
+    ##     total_pad = pad * (num_axes + 1)
+    ##     ax_height = (1. - total_pad) / num_axes
+    ##     ax_bottom = np.linspace(pad, 1. - (ax_height + pad), num_axes)
+    ##     ax_top = ax_bottom + ax_height
+    ##     ax = {}
+
+    ##     for i in range(num_axes - self.sensor_data.loaded):
+    ##         ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
+    ##         ax[i].plot(self.log_data.time - self.log_data.time[0],
+    ##                    self.log_data.data[self.selected_params[i]])
+    ##         ax[i].set_ylabel(self.selected_params[i].replace('_', ' '))
+
+    ##     i = num_axes - 1
+    ##     if self.sensor_data.loaded:
+    ##         ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
+    ##         for j in range(len(self.selected_channels)):
+    ##             ax[i].plot(self.sensor_data.time,
+    ##                        self.sensor_data.data[self.selected_channels[j]] \
+    ##                        * self.selected_channels_gains[j],
+    ##                        label=self.selected_channels[j].replace('_', ' '))
+    ##         ax[i].set_xlabel('Time (s)')
+    ##         ax[i].set_ylabel('Sensor Current (nA)')
+    ##         ax[i].legend(loc='best')
+    ##     fig.show()
 
     def start(self):
         self.configure_traits(view='main_view')
