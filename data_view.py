@@ -1,5 +1,6 @@
 import numpy as np
-from os.path import basename
+from os.path import abspath, basename
+from os import curdir
 
 from traits.api \
      import Bool, Button, File, Float, HasTraits, Instance, List, \
@@ -22,9 +23,12 @@ class Channel(HasTraits):
 
 
 class DataSource(HasTraits):
-    #loaded = Bool(False)
+    '''
+    data source containing a filename, an ArrayPlotData structure for
+    plotting in Chaco
+    '''
     a_p_data = ArrayPlotData()
-    #time = np.asarray([])
+    file_name = File()
 
     ## channels = List(Channel)
     ## channels_disp = List
@@ -38,14 +42,6 @@ class DataSource(HasTraits):
     ## selected_channels_gains = Property(List(Float),
     ##                                    depends_on=['selected_channels'])
 
-    ## sensor_data = Data()
-    ## log_data = Data()
-
-    file_name = File(filter=['csv'])
-    ## log_file = File(filter=['csv'])
-
-    ## data_file_status = Str('none loaded')
-    ## log_file_status = Str('none loaded')
 
     def __repr__(self):
         return basename(self.file_name)
@@ -97,7 +93,6 @@ class DataSource(HasTraits):
         ## self.configure_traits(view='channel_view')
 
 
-
 class calterm_data_viewer(HasTraits):
     """
     This is the user interface for plotting results from data acquisition
@@ -105,14 +100,15 @@ class calterm_data_viewer(HasTraits):
     interface application. The UI is built with Enthought's Traits and TraitsUI
     """
     ## UI elements
-    #align_button = Button()
+    add_source_button = Button()
+    align_button = Button()
+    channel_select_button = Button()
+    delete_button = Button()
+    gain_set_button = Button()
     plot_button = Button()
     save_button = Button()
-    file_to_open = File()
 
-    #param_select_button = Button()
-    #channel_select_button = Button()
-    #gain_set_button = Button()
+    file_to_open = File(value=abspath(curdir))
 
     data_source_list = List(Instance(DataSource))
 
@@ -121,48 +117,60 @@ class calterm_data_viewer(HasTraits):
             Group(
                 Item(name='data_source_list',
                      style='readonly',
+                     show_label=False,
                      editor=ListStrEditor()),
-                Item(name='file_to_open'),
                 Group(
-#                    Item('channel_select_button',
-#                         label='Ch. Select',
-#                         show_label=False),
-#                    Item('gain_set_button',
-#                         label='Gain Set',
-#                         show_label=False),
-                    orientation='horizontal'),
-                Group(
-#                    Item(name='log_file',
-#                         style='simple'),
-#                    Item('param_select_button',
-#                         label='Parameter Select',
-#                         show_label=False),
-                    orientation='horizontal'),
-                orientation='vertical'),
+                    Item('delete_button',
+                         label='Delete',
+                         show_label=False),
+                    Item('channel_select_button',
+                         label='Channels...',
+                         show_label=False),
+                    Item('gain_set_button',
+                         label='Gains...',
+                         show_label=False),
+                    orientation='vertical'),
+                orientation='horizontal'),
             Group(
-#                Item(name='align_button',
-#                     label="Align Data",
-#                     show_label=False),
-                Item(name='plot_button',
-                     label="Plot",
-                     show_label=False),
-                Item(name='save_button',
-                     label="Save",
-                     show_label=False),
-                orientation="vertical"),
-            orientation="horizontal"),
+                 Item(name='file_to_open',
+                      label='Data File',
+                      style='custom',
+                      show_label=False),
+                Group(
+                    Item('add_source_button',
+                         label='Add Source',
+                         show_label=False),
+                    Item(name='align_button',
+                         label="Align Data",
+                         show_label=False),
+                    Item(name='plot_button',
+                         label="Plot",
+                         show_label=False),
+                    Item(name='save_button',
+                         label="Save",
+                         show_label=False),
+                    orientation="vertical"),
+                orientation="horizontal"),
+            orientation="vertical"),
         title="Calterm III data alignment and analysis",
-        height=200,
+        height=500,
+        width=450,
         buttons=[OKButton])
 
-    def _file_to_open_changed(self):
+    file_open_view = View(Item(name='file_to_open',
+                               style='simple',
+                               show_label=False),
+                          buttons=[OKButton, CancelButton])
+
+#    def _file_to_open_changed(self):
+    def _add_source_button_fired(self):
+        #self.configure_traits(view='file_open_view')
         if self.file_to_open == '':
             return
-        d_s = DataSource(file_name = self.file_to_open)
+        d_s = DataSource(file_name=self.file_to_open)
         self.data_source_list.append(d_s)
-        self.file_to_open = ''
+#        self.file_to_open = ''
 
-    file_open_view = View(Item(name='file_to_open'))
 
 ##     parameter_view = View(
 ##         Item(name='selected_params',
