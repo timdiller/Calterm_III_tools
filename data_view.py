@@ -33,6 +33,7 @@ class DataSource(HasTraits):
     ## channels = List(Channel)
     ## channels_disp = List
     ## channel_names = Property(List(String), depends_on=['channels'])
+    channel_names = Property()
     ## channel_units = Property(List(String), depends_on=['channels'])
 
     ## channels = List(Channel)
@@ -47,7 +48,21 @@ class DataSource(HasTraits):
         return basename(self.file_name)
 
     def _get_channel_names(self):
-        return [n.name for n in self.parameters]
+        return self.a_p_data.arrays.keys()
+
+    selected_channels = List(String())
+
+    channel_view = View(
+        Item(name='selected_channels',
+             show_label=False,
+             style='custom',
+             editor=SetEditor(name='channel_names',
+                              ordered=True,
+                              can_move_all=True,
+                              left_column_title="Available channels",
+                              right_column_title="Channels to plot")),
+        title="Select channels to plot",
+        buttons=[OKButton, CancelButton])
 
     ## def _get_parameter_units(self):
     ##     return [n.unit for n in self.parameters]
@@ -111,6 +126,7 @@ class calterm_data_viewer(HasTraits):
     file_to_open = File(value=abspath(curdir))
 
     data_source_list = List(Instance(DataSource))
+    selected_data_source = Instance(DataSource)
 
     main_view = View(
         Group(
@@ -118,17 +134,20 @@ class calterm_data_viewer(HasTraits):
                 Item(name='data_source_list',
                      style='readonly',
                      show_label=False,
-                     editor=ListStrEditor()),
+                     editor=ListStrEditor(selected='selected_data_source')),
                 Group(
                     Item('delete_button',
                          label='Delete',
-                         show_label=False),
+                         show_label=False,
+                         enabled_when='selected_data_source is not None'),
                     Item('channel_select_button',
                          label='Channels...',
-                         show_label=False),
+                         show_label=False,
+                         enabled_when='selected_data_source is not None'),
                     Item('gain_set_button',
                          label='Gains...',
-                         show_label=False),
+                         show_label=False,
+                         enabled_when='selected_data_source is not None'),
                     orientation='vertical'),
                 orientation='horizontal'),
             Group(
@@ -169,46 +188,38 @@ class calterm_data_viewer(HasTraits):
             return
         d_s = DataSource(file_name=self.file_to_open)
         self.data_source_list.append(d_s)
-#        self.file_to_open = ''
+        ## self.file_to_open = ''
 
+    def _delete_button_fired(self):
+#        i = self.data_source_list.index()
+        self.data_source_list.remove(self.selected_data_source)
 
-##     parameter_view = View(
-##         Item(name='selected_params',
-##              show_label=False,
-##              style='custom',
-##              editor=SetEditor(name='parameter_names',
-##                               ordered=True,
-##                               can_move_all=True,
-##                               left_column_title="Available parameters",
-##                               right_column_title="Parameters to plot")),
-##         title="Select parameters to plot",
-##         buttons=[OKButton, CancelButton])
+    parameter_view = View(
+        Item(name='selected_params',
+             show_label=False,
+             style='custom',
+             editor=SetEditor(name='parameter_names',
+                              ordered=True,
+                              can_move_all=True,
+                              left_column_title="Available parameters",
+                              right_column_title="Parameters to plot")),
+        title="Select parameters to plot",
+        buttons=[OKButton, CancelButton])
 
-##     channel_view = View(
-##         Item(name='selected_channels',
-##              show_label=False,
-##              style='custom',
-##              editor=SetEditor(name='channel_names',
-##                               ordered=True,
-##                               can_move_all=True,
-##                               left_column_title="Available channels",
-##                               right_column_title="Channels to plot")),
-##         title="Select channels to plot",
-##         buttons=[OKButton, CancelButton])
-
-##     gains_view = View(
-##         Item(name='channels',
-##              style='custom',
-## #             editor=TableEditor()),
-##              editor=ListEditor(use_notebook=True)),
-##         title="Set the gains for each channel",
-##         buttons=[OKButton, CancelButton])
+    gains_view = View(
+        Item(name='channels',
+             style='custom',
+             #editor=TableEditor()),
+             editor=ListEditor(use_notebook=True)),
+        title="Set the gains for each channel",
+        buttons=[OKButton, CancelButton])
+    
 
     ## def _param_select_button_fired(self):
     ##     self.configure_traits(view='parameter_view')
 
-    ## def _channel_select_button_fired(self):
-    ##     self.configure_traits(view='channel_view')
+    def _channel_select_button_fired(self):
+        self.selected_data_source.configure_traits(view='channel_view')
 
     ## def _gain_set_button_fired(self):
     ##     self.configure_traits(view='gains_view')
