@@ -3,23 +3,25 @@ from os.path import abspath, basename
 from os import curdir
 
 from traits.api \
-     import Bool, Button, File, Float, HasTraits, Instance, List, \
-     Property, String
+     import Bool, Button, File, Float, HasTraits, \
+     Instance, List, Property, String
+
 from traitsui.api \
-     import CancelButton, Group, Item, ListEditor, OKButton, SetEditor, \
-     StatusItem, View, ListStrEditor
+     import CancelButton, Group, Item, ListEditor, \
+     OKButton, SetEditor, StatusItem, View, ListStrEditor
+
 from chaco.api \
      import ArrayPlotData, Plot
 
 from Calterm_III_tools \
      import open_DAQ_file
 
-class Channel(HasTraits):
-    name = String
-    unit = String
-    gain = Float(1.0)
+## class Channel(HasTraits):
+##     name = String
+##     unit = String
+##     gain = Float(1.0)
 
-#class Channel(Parameter):
+## class Channel(Parameter):
 
 
 class DataSource(HasTraits):
@@ -44,6 +46,11 @@ class DataSource(HasTraits):
     ##                                    depends_on=['selected_channels'])
 
 
+    def __init__(self, **kwargs):
+        filename = kwargs.pop('file_name')
+        self.load_file(filename)
+        self.file_name = filename
+        
     def __repr__(self):
         return basename(self.file_name)
 
@@ -83,7 +90,8 @@ class DataSource(HasTraits):
     ##     return [self.channel_gains[self.channel_names.index(n)]
     ##             for n in self.selected_channels]
 
-    def _file_name_changed(self, filename):
+    ##def _file_name_changed(self, filename):
+    def load_file(self, filename):
         time, data, err = open_DAQ_file(filename)
         if not err:
             self.a_p_data.set_data('time',time)
@@ -91,21 +99,6 @@ class DataSource(HasTraits):
                 self.a_p_data.set_data(name,data[name])
         else:
             print "Deal with the error here."
-            ##self.log_data.loaded = False
-
-                #def _data_file_changed(self):
-        ## from os.path import splitext
-        ## DEFAULT_GAIN = 1.875  ## nA/V
-        ## DEFAULT_UNIT = 'nA'
-
-        ## [self.sensor_data.time, self.sensor_data.data] = \
-        ##                         fileopen[splitext(self.data_file)[1]]()
-        ## for i in self.sensor_data.data.dtype.names:
-        ##     self.channels.append(Channel(name=i,
-        ##                                  gain=DEFAULT_GAIN,
-        ##                                  unit=DEFAULT_UNIT))
-        ## self.sensor_data.loaded = True
-        ## self.configure_traits(view='channel_view')
 
 
 class calterm_data_viewer(HasTraits):
