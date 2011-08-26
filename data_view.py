@@ -16,6 +16,57 @@ from chaco.api \
 from Calterm_III_tools \
      import open_DAQ_file
 
+main_view = View(
+    Group(
+        Group(
+             Item(name='file_to_open',
+                  label='Data File',
+                  style='custom',
+                  show_label=False),
+            Group(
+                Item('add_source_button',
+                     label='Add Source',
+                     show_label=False),
+                Item(name='align_button',
+                     label="Align Data",
+                     show_label=False),
+                Item(name='plot_button',
+                     label="Plot",
+                     show_label=False),
+                Item(name='save_button',
+                     label="Save",
+                     show_label=False),
+                orientation="vertical"),
+            orientation="horizontal"),
+        Group(
+            Item(name='data_source_list',
+                 style='readonly',
+                 show_label=False,
+                 editor=ListStrEditor(
+                     selected='selected_data_source',
+                     editable=False,
+                     title='Data Sources')),
+            Group(
+                Item('delete_button',
+                     label='Delete',
+                     show_label=False,
+                     enabled_when='selected_data_source is not None'),
+                Item('channel_select_button',
+                     label='Channels...',
+                     show_label=False,
+                     enabled_when='selected_data_source is not None'),
+                Item('gain_set_button',
+                     label='Gains...',
+                     show_label=False,
+                     enabled_when='selected_data_source is not None'),
+                orientation='vertical'),
+            orientation='horizontal'),
+        orientation="vertical"),
+    title="Calterm III data alignment and analysis",
+    height=500,
+    width=450,
+    buttons=[OKButton])
+
 channels_view = View(
     Item(name='selected_channels',
          show_label=False,
@@ -120,57 +171,6 @@ class calterm_data_viewer(HasTraits):
     data_source_list = List(Instance(DataSource))
     selected_data_source = Instance(DataSource)
 
-    main_view = View(
-        Group(
-            Group(
-                 Item(name='file_to_open',
-                      label='Data File',
-                      style='custom',
-                      show_label=False),
-                Group(
-                    Item('add_source_button',
-                         label='Add Source',
-                         show_label=False),
-                    Item(name='align_button',
-                         label="Align Data",
-                         show_label=False),
-                    Item(name='plot_button',
-                         label="Plot",
-                         show_label=False),
-                    Item(name='save_button',
-                         label="Save",
-                         show_label=False),
-                    orientation="vertical"),
-                orientation="horizontal"),
-            Group(
-                Item(name='data_source_list',
-                     style='readonly',
-                     show_label=False,
-                     editor=ListStrEditor(
-                         selected='selected_data_source',
-                         editable=False,
-                         title='Data Sources')),
-                Group(
-                    Item('delete_button',
-                         label='Delete',
-                         show_label=False,
-                         enabled_when='selected_data_source is not None'),
-                    Item('channel_select_button',
-                         label='Channels...',
-                         show_label=False,
-                         enabled_when='selected_data_source is not None'),
-                    Item('gain_set_button',
-                         label='Gains...',
-                         show_label=False,
-                         enabled_when='selected_data_source is not None'),
-                    orientation='vertical'),
-                orientation='horizontal'),
-            orientation="vertical"),
-        title="Calterm III data alignment and analysis",
-        height=500,
-        width=450,
-        buttons=[OKButton])
-
     def _add_source_button_fired(self):
         if self.file_to_open == '':
             return
@@ -183,8 +183,8 @@ class calterm_data_viewer(HasTraits):
     def _channel_select_button_fired(self):
         self.selected_data_source.edit_traits(view=channels_view)
 
-    ## def _gain_set_button_fired(self):
-    ##     self.configure_traits(view='gains_view')
+    def _gain_set_button_fired(self):
+        self.selected_data_source.edit_traits(view=gains_view)
 
     ## def _plot_button_fired(self):
     ##     import matplotlib as mpl
@@ -236,7 +236,7 @@ class calterm_data_viewer(HasTraits):
     ##     fig.show()
 
     def start(self):
-        self.configure_traits(view='main_view')
+        self.configure_traits(view=main_view)
 
 if __name__ == '__main__':
     f = calterm_data_viewer()
