@@ -4,7 +4,7 @@ from os import curdir
 
 from traits.api \
      import Bool, Button, File, Float, HasTraits, \
-     Instance, List, Property, String
+     Instance, List, Property, String, DelegatesTo
 
 from traitsui.api \
      import CancelButton, Group, Item, ListEditor, \
@@ -16,60 +16,71 @@ from chaco.api \
 from Calterm_III_tools \
      import open_DAQ_file
 
-## class Channel(HasTraits):
-##     name = String
-##     unit = String
-##     gain = Float(1.0)
+channels_view = View(
+    Item(name='selected_channels',
+         show_label=False,
+         style='custom',
+         editor=SetEditor(
+             name='channel_names',
+             ordered=True,
+             can_move_all=True,
+             left_column_title="Available channels",
+             right_column_title="Channels to plot")),
+    title="Select channels to plot",
+    buttons=[OKButton, CancelButton])
 
-## class Channel(Parameter):
+file_open_view = View(
+    Item(name='file_to_open',
+         style='simple',
+         show_label=False),
+    buttons=[OKButton, CancelButton])
 
+parameter_view = View(
+    Item(name='selected_params',
+         show_label=False,
+         style='custom',
+         editor=SetEditor(
+             name='parameter_names',
+             ordered=True,
+             can_move_all=True,
+             left_column_title="Available parameters",
+             right_column_title="Parameters to plot")),
+    title="Select parameters to plot",
+    buttons=[OKButton, CancelButton])
+
+gains_view = View(
+    Item(name='channels',
+         style='custom',
+         #editor=TableEditor()),
+         editor=ListEditor(use_notebook=True)),
+    title="Set the gains for each channel",
+    buttons=[OKButton, CancelButton])
 
 class DataSource(HasTraits):
     '''
     data source containing a filename, an ArrayPlotData structure for
     plotting in Chaco
     '''
-    a_p_data = ArrayPlotData()
-    file_name = File()
-
-    ## channels = List(Channel)
-    ## channels_disp = List
-    ## channel_names = Property(List(String), depends_on=['channels'])
-    channel_names = Property()
-    ## channel_units = Property(List(String), depends_on=['channels'])
-
-    ## channels = List(Channel)
-    ## channel_names = Property(List(String), depends_on=['channels'])
-    ## channel_gains = Property(List(String), depends_on=['channels'])
-    ## selected_channels = List
-    ## selected_channels_gains = Property(List(Float),
-    ##                                    depends_on=['selected_channels'])
-
+    a_p_data = Instance(ArrayPlotData)
+    file_name = File
+    channel_names = Property
+    channel_gains = Property
+    selected_channels = List(String)
 
     def __init__(self, **kwargs):
-        filename = kwargs.pop('file_name')
-        self.load_file(filename)
+        if 'file_name' in kwargs:
+            filename = kwargs.pop('file_name')
+            self.load_file(filename)
         self.file_name = filename
-        
+
+    def _a_p_data_default(self):
+        return ArrayPlotData()
+
     def __repr__(self):
         return basename(self.file_name)
 
     def _get_channel_names(self):
         return self.a_p_data.arrays.keys()
-
-    selected_channels = List(String())
-
-    channel_view = View(
-        Item(name='selected_channels',
-             show_label=False,
-             style='custom',
-             editor=SetEditor(name='channel_names',
-                              ordered=True,
-                              can_move_all=True,
-                              left_column_title="Available channels",
-                              right_column_title="Channels to plot")),
-        title="Select channels to plot",
-        buttons=[OKButton, CancelButton])
 
     ## def _get_parameter_units(self):
     ##     return [n.unit for n in self.parameters]
@@ -91,6 +102,7 @@ class DataSource(HasTraits):
     ##             for n in self.selected_channels]
 
     ##def _file_name_changed(self, filename):
+
     def load_file(self, filename):
         time, data, err = open_DAQ_file(filename)
         if not err:
@@ -99,6 +111,7 @@ class DataSource(HasTraits):
                 self.a_p_data.set_data(name,data[name])
         else:
             print "Deal with the error here."
+
 
 
 class calterm_data_viewer(HasTraits):
@@ -115,6 +128,7 @@ class calterm_data_viewer(HasTraits):
     gain_set_button = Button()
     plot_button = Button()
     save_button = Button()
+    channel_names = DelegatesTo('selected_data_source')
 
     file_to_open = File(value=abspath(curdir))
 
@@ -172,50 +186,21 @@ class calterm_data_viewer(HasTraits):
         width=450,
         buttons=[OKButton])
 
-    file_open_view = View(Item(name='file_to_open',
-                               style='simple',
-                               show_label=False),
-                          buttons=[OKButton, CancelButton])
-
-#    def _file_to_open_changed(self):
+    
     def _add_source_button_fired(self):
-        #self.configure_traits(view='file_open_view')
         if self.file_to_open == '':
             return
         d_s = DataSource(file_name=self.file_to_open)
         self.data_source_list.append(d_s)
-        ## self.file_to_open = ''
 
     def _delete_button_fired(self):
-#        i = self.data_source_list.index()
         self.data_source_list.remove(self.selected_data_source)
-
-    parameter_view = View(
-        Item(name='selected_params',
-             show_label=False,
-             style='custom',
-             editor=SetEditor(name='parameter_names',
-                              ordered=True,
-                              can_move_all=True,
-                              left_column_title="Available parameters",
-                              right_column_title="Parameters to plot")),
-        title="Select parameters to plot",
-        buttons=[OKButton, CancelButton])
-
-    gains_view = View(
-        Item(name='channels',
-             style='custom',
-             #editor=TableEditor()),
-             editor=ListEditor(use_notebook=True)),
-        title="Set the gains for each channel",
-        buttons=[OKButton, CancelButton])
-    
 
     ## def _param_select_button_fired(self):
     ##     self.configure_traits(view='parameter_view')
 
     def _channel_select_button_fired(self):
-        self.selected_data_source.configure_traits(view='channel_view')
+        self.selected_data_source.edit_traits(view=channels_view)
 
     ## def _gain_set_button_fired(self):
     ##     self.configure_traits(view='gains_view')
