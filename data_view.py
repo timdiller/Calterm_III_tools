@@ -99,11 +99,22 @@ parameter_view = View(
     title="Select parameters to plot",
     buttons=[OKButton, CancelButton])
 
+channel_edit_sub_view = View(
+    Group(
+        Item(name="name", style="readonly"),
+        Item(name="gain"),
+        Item(name="units"),
+        orientation="vertical"))
+
 gains_view = View(
-    Item(name='channel_gains',
+    Item(name='channels',
          style='custom',
          #editor=TableEditor()),
-         editor=ListEditor(use_notebook=True)),
+         editor=ListEditor(
+             use_notebook=True,
+             deletable=True,
+             view=channel_edit_sub_view
+             )),
     title="Set the gains for each channel",
     buttons=[OKButton, CancelButton])
 
@@ -148,11 +159,11 @@ class DataSource(HasTraits):
     def _get_channel_names(self):
         return self.a_p_data.arrays.keys()
 
-    def _get_channel_units(self):
-        return self.channel_units.values()
+    ## def _get_channel_units(self):
+    ##     return self.channel_units.values()
 
-    def _get_channel_gains(self):
-        return self.channel_gains.values()
+    ## def _get_channel_gains(self):
+    ##     return self.channel_gains.values()
 
     ## def _get_channel_gains(self):
     ##     return [n.gain for n in self.channels]
