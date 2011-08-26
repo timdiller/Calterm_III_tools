@@ -85,23 +85,8 @@ class DataSource(HasTraits):
     ## def _get_parameter_units(self):
     ##     return [n.unit for n in self.parameters]
 
-    ## def _get_channel_names(self):
-    ##     return [n.name for n in self.channels]
-
     ## def _get_channel_gains(self):
     ##     return [n.gain for n in self.channels]
-
-    ## def _channel_gains_changed(self):
-    ##     print "setting gains.\n"
-    ##     print self.channel_gains
-    ##     for n in range(self.channel_gains):
-    ##         self.channels[n].gain = channel_gains[n]
-
-    ## def _get_selected_channels_gains(self):
-    ##     return [self.channel_gains[self.channel_names.index(n)]
-    ##             for n in self.selected_channels]
-
-    ##def _file_name_changed(self, filename):
 
     def load_file(self, filename):
         time, data, err = open_DAQ_file(filename)
