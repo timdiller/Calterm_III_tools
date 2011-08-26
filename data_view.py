@@ -3,8 +3,8 @@ from os.path import abspath, basename
 from os import curdir
 
 from traits.api \
-     import Bool, Button, File, Float, HasTraits, \
-     Instance, List, Property, String, DelegatesTo
+     import Bool, Button, DelegatesTo, Dict, File, Float, HasTraits, \
+     Instance, List, Property, String
 
 from traitsui.api \
      import CancelButton, Group, Item, ListEditor, \
@@ -100,13 +100,20 @@ parameter_view = View(
     buttons=[OKButton, CancelButton])
 
 gains_view = View(
-    Item(name='channels',
+    Item(name='channel_gains',
          style='custom',
          #editor=TableEditor()),
          editor=ListEditor(use_notebook=True)),
     title="Set the gains for each channel",
     buttons=[OKButton, CancelButton])
 
+class Channel(HasTraits):
+    def __repr__(self):
+        return self.name
+    
+    name = String
+    gain = Float
+    units = String
 
 class DataSource(HasTraits):
     '''
@@ -116,13 +123,20 @@ class DataSource(HasTraits):
     a_p_data = Instance(ArrayPlotData)
     file_name = File
     channel_names = Property
-    channel_gains = Property
     selected_channels = List(String)
+    channels = List(Channel)
 
     def __init__(self, **kwargs):
-        if 'file_name' in kwargs:
-            filename = kwargs.pop('file_name')
+        filename = kwargs.get('file_name','')
+        if filename:
             self.load_file(filename)
+            for c_name in self.channel_names:
+                units = kwargs.get('units','')
+                temp_chan = Channel(
+                    name=c_name,
+                    gain=1.0,
+                    units=units)
+                self.channels.append(temp_chan)
         self.file_name = filename
 
     def _a_p_data_default(self):
@@ -134,8 +148,11 @@ class DataSource(HasTraits):
     def _get_channel_names(self):
         return self.a_p_data.arrays.keys()
 
-    ## def _get_parameter_units(self):
-    ##     return [n.unit for n in self.parameters]
+    def _get_channel_units(self):
+        return self.channel_units.values()
+
+    def _get_channel_gains(self):
+        return self.channel_gains.values()
 
     ## def _get_channel_gains(self):
     ##     return [n.gain for n in self.channels]
@@ -164,6 +181,7 @@ class calterm_data_viewer(HasTraits):
     gain_set_button = Button()
     plot_button = Button()
     save_button = Button()
+
     channel_names = DelegatesTo('selected_data_source')
 
     file_to_open = File(value=abspath(curdir))
