@@ -56,6 +56,7 @@ gains_view = View(
     title="Set the gains for each channel",
     buttons=[OKButton, CancelButton])
 
+
 class DataSource(HasTraits):
     '''
     data source containing a filename, an ArrayPlotData structure for
@@ -91,12 +92,11 @@ class DataSource(HasTraits):
     def load_file(self, filename):
         time, data, err = open_DAQ_file(filename)
         if not err:
-            self.a_p_data.set_data('time',time)
+            self.a_p_data.set_data('time', time)
             for name in data.dtype.names:
-                self.a_p_data.set_data(name,data[name])
+                self.a_p_data.set_data(name, data[name])
         else:
             print "Deal with the error here."
-
 
 
 class calterm_data_viewer(HasTraits):
@@ -171,7 +171,6 @@ class calterm_data_viewer(HasTraits):
         width=450,
         buttons=[OKButton])
 
-    
     def _add_source_button_fired(self):
         if self.file_to_open == '':
             return
@@ -180,9 +179,6 @@ class calterm_data_viewer(HasTraits):
 
     def _delete_button_fired(self):
         self.data_source_list.remove(self.selected_data_source)
-
-    ## def _param_select_button_fired(self):
-    ##     self.configure_traits(view='parameter_view')
 
     def _channel_select_button_fired(self):
         self.selected_data_source.edit_traits(view=channels_view)
