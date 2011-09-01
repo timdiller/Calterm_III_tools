@@ -51,12 +51,16 @@ main_view = View(
                      label='Delete',
                      show_label=False,
                      enabled_when='selected_data_source is not None'),
-                Item('channel_select_button',
-                     label='Channels...',
+                ## Item('channel_select_button', 
+                ##      label='Select Channels...',
+                ##      show_label=False,
+                ##      enabled_when='selected_data_source is not None'),
+                Item('ds_details_button',
+                     label='Data Source Details...',
                      show_label=False,
                      enabled_when='selected_data_source is not None'),
-                Item('gain_set_button',
-                     label='Gains...',
+                Item('ch_details_button',
+                     label='Ch. Details...',
                      show_label=False,
                      enabled_when='selected_data_source is not None'),
                 orientation='vertical'),
@@ -67,64 +71,82 @@ main_view = View(
     width=450,
     buttons=[OKButton])
 
-channels_view = View(
-    Item(name='selected_channels',
-         show_label=False,
-         style='custom',
-         editor=SetEditor(
-             name='channel_names',
-             ordered=True,
-             can_move_all=True,
-             left_column_title="Available channels",
-             right_column_title="Channels to plot")),
-    title="Select channels to plot",
-    buttons=[OKButton, CancelButton])
+## channels_view = View(
+##     Item(name='selected_channels',
+##          show_label=False,
+##          style='custom',
+##          editor=SetEditor(
+##              name='channels',
+##              ordered=True,
+##              can_move_all=True,
+##              left_column_title="Available channels",
+##              right_column_title="Channels to plot")),
+##     title="Select channels to plot",
+##     buttons=[OKButton, CancelButton])
 
-file_open_view = View(
-    Item(name='file_to_open',
-         style='simple',
-         show_label=False),
-    buttons=[OKButton, CancelButton])
-
-parameter_view = View(
-    Item(name='selected_params',
-         show_label=False,
-         style='custom',
-         editor=SetEditor(
-             name='parameter_names',
-             ordered=True,
-             can_move_all=True,
-             left_column_title="Available parameters",
-             right_column_title="Parameters to plot")),
-    title="Select parameters to plot",
-    buttons=[OKButton, CancelButton])
+## file_open_view = View(
+##     Item(name='file_to_open',
+##          style='simple',
+##          show_label=False),
+##     buttons=[OKButton, CancelButton])
 
 channel_edit_sub_view = View(
     Group(
-        Item(name="name", style="readonly"),
+        ## Item(name="name"),
+        Item(name="display_name"),
         Item(name="gain"),
         Item(name="units"),
         orientation="vertical"))
 
-gains_view = View(
-    Item(name='channels',
+ch_details_view = View(
+    Item(name='selected_channels',
+         show_label=False,
          style='custom',
-         #editor=TableEditor()),
          editor=ListEditor(
              use_notebook=True,
              deletable=True,
+             page_name='.name',
              view=channel_edit_sub_view
              )),
-    title="Set the gains for each channel",
+    title="Edit details for each channel",
+    resizable=True,
     buttons=[OKButton, CancelButton])
 
+ds_details_view = View(
+    Group(
+        Item(name="file_name", label='file'),
+        Item(name="collapsed", label='collapse plots'),
+        Item(name='selected_channels',
+             show_label=False,
+             style='custom',
+             editor=SetEditor(
+                 name='channels',
+                 ordered=True,
+                 can_move_all=True,
+                 left_column_title="Available channels",
+                 right_column_title="Channels to plot")),
+        orientation="vertical"),
+    title="Edit data source details.",
+    buttons=[OKButton, CancelButton])
+
+
 class Channel(HasTraits):
+    """
+    Display information about the channels contained in a data source:
+    name - (read-only) name to use to reference the array in a_p_data
+    display_name - name to display on plots
+    gain - a float value to apply to the selected channel
+    units - units will be displayed in parentheses on the y-axis after
+            display_name
+    """
+
     def __repr__(self):
         return self.name
-    
     name = String
+    display_name = String
     gain = Float
     units = String
+
 
 class DataSource(HasTraits):
     '''
@@ -134,46 +156,47 @@ class DataSource(HasTraits):
     a_p_data = Instance(ArrayPlotData)
     file_name = File
     channel_names = Property
-    selected_channels = List(String)
+    selected_channels = List(Channel)
     channels = List(Channel)
+    collapsed = Bool(False)
+    name = String
 
     def __init__(self, **kwargs):
-        filename = kwargs.get('file_name','')
+        filename = kwargs.get('file_name', '')
         if filename:
             self.load_file(filename)
-            for c_name in self.channel_names:
-                units = kwargs.get('units','')
-                temp_chan = Channel(
-                    name=c_name,
-                    gain=1.0,
-                    units=units)
-                self.channels.append(temp_chan)
         self.file_name = filename
+        self.name = basename(filename)
 
     def _a_p_data_default(self):
         return ArrayPlotData()
 
     def __repr__(self):
-        return basename(self.file_name)
+        return self.name
+
+    def _file_name_changed(self):
+        self.load_file(self.file_name)
 
     def _get_channel_names(self):
         return self.a_p_data.arrays.keys()
 
-    ## def _get_channel_units(self):
-    ##     return self.channel_units.values()
-
-    ## def _get_channel_gains(self):
-    ##     return self.channel_gains.values()
-
-    ## def _get_channel_gains(self):
-    ##     return [n.gain for n in self.channels]
-
     def load_file(self, filename):
-        time, data, err = open_DAQ_file(filename)
+        time, data, units, err = open_DAQ_file(filename)
         if not err:
             self.a_p_data.set_data('time', time)
             for name in data.dtype.names:
                 self.a_p_data.set_data(name, data[name])
+            for name in self.channel_names:
+                if units:
+                    ch_units = units['name']
+                else:
+                    units = ''
+                temp_chan = Channel(
+                    name=name,
+                    display_name=name,
+                    gain=1.0,
+                    units=units)
+                self.channels.append(temp_chan)
         else:
             print "Deal with the error here."
 
@@ -187,9 +210,10 @@ class calterm_data_viewer(HasTraits):
     ## UI elements
     add_source_button = Button()
     align_button = Button()
-    channel_select_button = Button()
+    ds_details_button = Button()
+    ## channel_select_button = Button()
     delete_button = Button()
-    gain_set_button = Button()
+    ch_details_button = Button()
     plot_button = Button()
     save_button = Button()
 
@@ -209,11 +233,14 @@ class calterm_data_viewer(HasTraits):
     def _delete_button_fired(self):
         self.data_source_list.remove(self.selected_data_source)
 
-    def _channel_select_button_fired(self):
-        self.selected_data_source.edit_traits(view=channels_view)
+    ## def _channel_select_button_fired(self):
+    ##     self.selected_data_source.edit_traits(view=channels_view)
 
-    def _gain_set_button_fired(self):
-        self.selected_data_source.edit_traits(view=gains_view)
+    def _ch_details_button_fired(self):
+        self.selected_data_source.edit_traits(view=ch_details_view)
+
+    def _ds_details_button_fired(self):
+        self.selected_data_source.edit_traits(view=ds_details_view)
 
     ## def _plot_button_fired(self):
     ##     import matplotlib as mpl
