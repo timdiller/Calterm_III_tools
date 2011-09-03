@@ -51,10 +51,6 @@ main_view = View(
                      label='Delete',
                      show_label=False,
                      enabled_when='selected_data_source is not None'),
-                ## Item('channel_select_button', 
-                ##      label='Select Channels...',
-                ##      show_label=False,
-                ##      enabled_when='selected_data_source is not None'),
                 Item('ds_details_button',
                      label='Data Source Details...',
                      show_label=False,
@@ -84,12 +80,6 @@ main_view = View(
 ##     title="Select channels to plot",
 ##     buttons=[OKButton, CancelButton])
 
-## file_open_view = View(
-##     Item(name='file_to_open',
-##          style='simple',
-##          show_label=False),
-##     buttons=[OKButton, CancelButton])
-
 channel_edit_sub_view = View(
     Group(
         ## Item(name="name"),
@@ -107,14 +97,18 @@ ch_details_view = View(
              deletable=True,
              page_name='.name',
              view=channel_edit_sub_view
-             )),
+             ),
+         resizable=True),
     title="Edit details for each channel",
     resizable=True,
     buttons=[OKButton, CancelButton])
 
 ds_details_view = View(
     Group(
-        Item(name="file_name", label='file'),
+        Item(name="file_name",
+             label='file',
+             style='readonly'),
+        Item(name="name", label='data source name'),
         Item(name="collapsed", label='collapse plots'),
         Item(name='selected_channels',
              show_label=False,
@@ -174,9 +168,6 @@ class DataSource(HasTraits):
     def __repr__(self):
         return self.name
 
-    def _file_name_changed(self):
-        self.load_file(self.file_name)
-
     def _get_channel_names(self):
         return self.a_p_data.arrays.keys()
 
@@ -186,16 +177,16 @@ class DataSource(HasTraits):
             self.a_p_data.set_data('time', time)
             for name in data.dtype.names:
                 self.a_p_data.set_data(name, data[name])
-            for name in self.channel_names:
-                if units:
+            #for name in self.channel_names:
+                if units is not None:
                     ch_units = units['name']
                 else:
-                    units = ''
+                    ch_units = ''
                 temp_chan = Channel(
                     name=name,
                     display_name=name,
                     gain=1.0,
-                    units=units)
+                    units=ch_units)
                 self.channels.append(temp_chan)
         else:
             print "Deal with the error here."
@@ -205,7 +196,8 @@ class calterm_data_viewer(HasTraits):
     """
     This is the user interface for plotting results from data acquisition
     supplemented with log file data from Calterm III, the Cummins ECM
-    interface application. The UI is built with Enthought's Traits and TraitsUI
+    interface application. The UI is built with Enthought's Traits and
+    TraitsUI 
     """
     ## UI elements
     add_source_button = Button()
@@ -217,7 +209,7 @@ class calterm_data_viewer(HasTraits):
     plot_button = Button()
     save_button = Button()
 
-    channel_names = DelegatesTo('selected_data_source')
+    #channel_names = DelegatesTo('selected_data_source')
 
     file_to_open = File(value=abspath(curdir))
 
