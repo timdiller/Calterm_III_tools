@@ -81,7 +81,7 @@ def calterm_log_open(filename):
     err = check_calterm_log_file_format(filename)
     if err:
         print err
-        return [None, None, err]
+        return [None, None, None, err]
     else:
         f = open(filename)
         data = np.genfromtxt(f, delimiter=',',
@@ -91,31 +91,37 @@ def calterm_log_open(filename):
                 names=import_calterm_log_param_names(filename)[0],
                 converters={1: convert_DLA})
         f.close()
+        units = None
         if 'DLA_Timestamp' in data.dtype.names:
-            return [data['DLA_Timestamp'], data, err]
+            return [data['DLA_Timestamp'], data, units, err]
         else:
-            err = "DLA_Timestamp not found. Parameters found include" \
-                  "the following:"
+            err = "DLA_Timestamp not found. Parameters found " + \
+                  "include the following:"
             print err, data.dtype.names
-            return [None, None, err]
+            return [None, None, None, err]
 
 
 def npz_open(filename):
     '''
+    returns time, data, units, err
+    
     If the file has an npz format, then look for arrays named 'time'
     and 'data'. Check this is so, and pass them back.
     '''
     from numpy import load
     npz = load(filename)
+    units = None
     if 'time' and 'data' in npz.files:
-        return(npz['time'], npz['data'], None)
+        return(npz['time'], npz['data'], units, None)
     else:
-        return None, None, "Error: did not find 'time' and 'data' " \
-               "in the save file."
+        return None, None, None, "Error: did not find 'time' and " + \
+               " 'data' in the save file."
 
 
 def csv_open(filename):
     '''
+    returns time, data, units, err
+    
     If the filename ends in .csv with no .log prepension, then
     assume that it was written by Tim Diller's LabView program, which
     has a three-line header:
@@ -137,7 +143,7 @@ def csv_open(filename):
     f.close()
     length = data.shape[0]
     time = linspace(0, step * (length - 1), length)
-    return(time, data, None)
+    return(time, data, None, None)
 
 
 def open_DAQ_file(filename):
@@ -155,10 +161,13 @@ def open_DAQ_file(filename):
         root, ext = splitext(filename)
         root, ext = splitext(root)
         if ext == '.log':
-            time, data, err = calterm_log_open(filename)
+            return calterm_log_open(filename)
+        
+            #time, data, units, err = calterm_log_open(filename)
         else:
-            time, data, err = csv_open(filename)
-        return time, data, err
+            return csv_open(filename)
+            #time, data, units, err = csv_open(filename)
+        return time, data, units, err
 
     fileopen = {'.npz': npz_open,
                 '.csv': csv_check}
