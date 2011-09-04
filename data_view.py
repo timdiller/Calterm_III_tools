@@ -234,54 +234,52 @@ class calterm_data_viewer(HasTraits):
     def _ds_details_button_fired(self):
         self.selected_data_source.edit_traits(view=ds_details_view)
 
-    ## def _plot_button_fired(self):
-    ##     import matplotlib as mpl
-    ##     import matplotlib.pyplot as plt
+    def _plot_button_fired(self):
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
 
-    ##     pad = 0.05
-    ##     fig_width = 8.5
-    ##     ax_left = 0.18
-    ##     ax_width = 0.75
+        pad = 0.05
+        fig_width = 8.5
+        ax_left = 0.18
+        ax_width = 0.75
 
-    ##     #Count how many axes need to be plotted
-    ##     num_axes = 0 + self.sensor_data.loaded
-    ##     #ax[i].set_ylabel(self.selected_param
+        #Count how many axes need to be plotted
+        num_axes = 0 
+        for ds in self.data_source_list:
+            if ds.collapsed:
+                num_axes += 1
+            else:
+                num_axes += len(ds.selected_channels)
+        print "num axes = " + str(num_axes)
 
-    ##     if self.log_data.loaded:
-    ##         num_axes += len(self.selected_params)
-    ##     if not(num_axes):
-    ##         print "No files loaded or no parameters selected.\n"
-    ##         return
+        fig_height = 11   ## 2. * num_axes + 1.5
+        fig = plt.figure(1, figsize=[fig_width, fig_height])
+        fig.clf()
 
-    ##     fig_height = 11   ## 2. * num_axes + 1.5
-    ##     fig = plt.figure(1, figsize=[fig_width, fig_height])
-    ##     fig.clf()
+        #calculate the geometry for displaying the axes
+        total_pad = pad * (num_axes + 1)
+        ax_height = (1. - total_pad) / num_axes
+        ax_bottom = np.linspace(pad, 1. - (ax_height + pad), num_axes)
+        ax_top = ax_bottom + ax_height
+        ax = []
+        i = -1
+        for ds in self.data_source_list:
+            time = ds.a_p_data['time'] - ds.a_p_data['time'][0]
+            isFirst = True
+            for ch in ds.selected_channels:
+                if isFirst or not ds.collapsed:
+                    i += 1
+                    ax.append(fig.add_axes([ax_left, ax_bottom[i],
+                                            ax_width, ax_height]))
+                    ax[i].set_xlabel('Time (s)')
+                    ax[i].set_ylabel(ch.display_name)
+                    ax[i].legend(loc='best')
+                    isFirst = False
+                ax[i].plot(time, ds.a_p_data[ch.name],
+                           label=ch.display_name)
 
-    ##     #calculate the geometry for displaying the axes
-    ##     total_pad = pad * (num_axes + 1)
-    ##     ax_height = (1. - total_pad) / num_axes
-    ##     ax_bottom = np.linspace(pad, 1. - (ax_height + pad), num_axes)
-    ##     ax_top = ax_bottom + ax_height
-    ##     ax = {}
 
-    ##     for i in range(num_axes - self.sensor_data.loaded):
-    ##         ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
-    ##         ax[i].plot(self.log_data.time - self.log_data.time[0],
-    ##                    self.log_data.data[self.selected_params[i]])
-    ##         ax[i].set_ylabel(self.selected_params[i].replace('_', ' '))
-
-    ##     i = num_axes - 1
-    ##     if self.sensor_data.loaded:
-    ##         ax[i] = fig.add_axes([ax_left, ax_bottom[i], ax_width, ax_height])
-    ##         for j in range(len(self.selected_channels)):
-    ##             ax[i].plot(self.sensor_data.time,
-    ##                        self.sensor_data.data[self.selected_channels[j]] \
-    ##                        * self.selected_channels_gains[j],
-    ##                        label=self.selected_channels[j].replace('_', ' '))
-    ##         ax[i].set_xlabel('Time (s)')
-    ##         ax[i].set_ylabel('Sensor Current (nA)')
-    ##         ax[i].legend(loc='best')
-    ##     fig.show()
+        fig.show()
 
     def start(self):
         self.configure_traits(view=main_view)
