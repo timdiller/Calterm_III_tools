@@ -82,6 +82,8 @@ main_view = View(
 ##     title="Select channels to plot",
 ##     buttons=[OKButton, CancelButton])
 
+## Channel edit view is called from the main view when the Channel details
+## button is selected.
 channel_edit_sub_view = View(
     Group(
         ## Item(name="name"),
