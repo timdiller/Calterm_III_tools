@@ -16,6 +16,8 @@ from chaco.api \
 from Calterm_III_tools \
      import open_DAQ_file
 
+## Main view is the primary application window called from command
+## line initiation.
 main_view = View(
     Group(
         Group(
